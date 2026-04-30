@@ -1,15 +1,19 @@
 package com.example.bilibili.ui.front
 
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bilibili.data.model.VideoItem
 import com.example.bilibili.databinding.ItemVideoCardBinding
 import com.example.bilibili.ui.playVideo.PlayVideoActivity
 import com.example.bilibili.util.GlideEngine
+import com.example.bilibili.util.VideoDataUtils.formatDuration
 
-class VideoAdapter(private var videoList: List<VideoItem>) :
-    RecyclerView.Adapter<VideoAdapter.VideoViewHolder>() {
+class VideoAdapter :
+    PagingDataAdapter<VideoItem, VideoAdapter.VideoViewHolder>(VideoItemDiffCallback()) {
 
     class VideoViewHolder(val binding: ItemVideoCardBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -21,7 +25,7 @@ class VideoAdapter(private var videoList: List<VideoItem>) :
     }
 
     override fun onBindViewHolder(holder: VideoViewHolder, position: Int) {
-        val item = videoList[position]
+        val item = getItem(position) ?: return
         val binding = holder.binding
 
         // 1. 设置标题
@@ -47,15 +51,13 @@ class VideoAdapter(private var videoList: List<VideoItem>) :
         // 点击时间跳转播放页面
         binding.root.setOnClickListener {
             val context = it.context
-            val intent = android.content.Intent(context, PlayVideoActivity::class.java).apply {
+            val intent = Intent(context, PlayVideoActivity::class.java).apply {
                 // 关键：将 videoId 传递给下一个 Activity
                 putExtra("video_id", item.videoId)
             }
             context.startActivity(intent)
         }
     }
-
-    override fun getItemCount() = videoList.size
 
     // 辅助工具：万级数字转换
     private fun formatCount(count: Int): String {
@@ -73,17 +75,14 @@ class VideoAdapter(private var videoList: List<VideoItem>) :
         return String.format("%02d:%02d", m, s)
     }
 
-    // 在 VideoAdapter 中添加这两个方法
-    fun updateData(newList: List<VideoItem>) {
-        this.videoList = newList.toMutableList()
-        notifyDataSetChanged() // 刷新通常是全部替换
-    }
+    // DiffCallback用于比较数据项是否相同
+    class VideoItemDiffCallback : DiffUtil.ItemCallback<VideoItem>() {
+        override fun areItemsTheSame(oldItem: VideoItem, newItem: VideoItem): Boolean {
+            return oldItem.videoId == newItem.videoId
+        }
 
-    fun addData(moreList: List<VideoItem>) {
-        if (moreList.isEmpty()) return
-        val startPos = this.videoList.size
-        (this.videoList as MutableList).addAll(moreList)
-        // 关键：只刷新新插入的那一部分，动画更丝滑
-        notifyItemRangeInserted(startPos, moreList.size)
+        override fun areContentsTheSame(oldItem: VideoItem, newItem: VideoItem): Boolean {
+            return oldItem == newItem
+        }
     }
 }

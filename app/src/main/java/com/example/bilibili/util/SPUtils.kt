@@ -12,6 +12,7 @@ object SPUtils {
     private const val CURRENT_COIN_COUNT = "currentCoinCount"
     private const val NICKNAME = "nickname"
     private const val AVATAR = "avatar"
+    private const val KEY_SEARCH_HISTORY = "search_history_json"
 
     private lateinit var prefs: SharedPreferences
 
@@ -51,8 +52,8 @@ object SPUtils {
     /**
      * 清理token（一般退出登录使用）
      */
-    fun cleanToken(token: String) {
-        prefs.edit().remove(KEY_TOKEN)
+    fun cleanToken() {
+        prefs.edit().remove(KEY_TOKEN).remove(USER_ID).remove(NICKNAME).remove(AVATAR).remove(CURRENT_COIN_COUNT).apply()
     }
 
     /**
@@ -110,4 +111,54 @@ object SPUtils {
     fun getAvatar(): String {
         return prefs.getString(AVATAR, "") ?: ""
     }
+
+    /**
+     * 保存单条搜索词
+     * 逻辑：去重、置顶、限额
+     */
+    fun saveSearchHistory(keyword: String) {
+        if (keyword.isBlank()) return
+
+        val historyList = getSearchHistory().toMutableList()
+
+        // 1. 去重（如果存在则删除，后续加到 0 位）
+        historyList.remove(keyword)
+
+        // 2. 置顶
+        historyList.add(0, keyword)
+
+        // 3. 限制最大存储数量（ 12 条）
+        val resultList = if (historyList.size > 12) historyList.subList(0, 12) else historyList
+
+        // 4. 使用 org.json 序列化
+        val jsonArray = org.json.JSONArray()
+        resultList.forEach { jsonArray.put(it) }
+
+        prefs.edit().putString(KEY_SEARCH_HISTORY, jsonArray.toString()).apply()
+    }
+
+    /**
+     * 获取所有搜索历史
+     */
+    fun getSearchHistory(): List<String> {
+        val historyJson = prefs.getString(KEY_SEARCH_HISTORY, "[]") ?: "[]"
+        val list = mutableListOf<String>()
+        try {
+            val jsonArray = org.json.JSONArray(historyJson)
+            for (i in 0 until jsonArray.length()) {
+                list.add(jsonArray.getString(i))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
+    /**
+     * 清空搜索历史
+     */
+    fun clearSearchHistory() {
+        prefs.edit().remove(KEY_SEARCH_HISTORY).apply()
+    }
+
 }

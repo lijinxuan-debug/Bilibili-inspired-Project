@@ -2,59 +2,42 @@ package com.example.bilibili.ui.personal.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
 import com.example.bilibili.data.api.PostService
-import com.example.bilibili.data.model.VideoItem
+import com.example.bilibili.util.RetrofitClient
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import org.json.JSONObject
+import kotlinx.coroutines.flow.flatMapLatest
 
-class HomeViewModel(private val apiService: PostService) : ViewModel() {
+class HomeViewModel : ViewModel() {
+    private val apiService = RetrofitClient.create(PostService::class.java)
 
-    private val _videoList = MutableStateFlow<List<VideoItem>>(emptyList())
-    val videoList: StateFlow<List<VideoItem>> = _videoList
+    // 当前用户ID
+    private val _userId = MutableStateFlow("")
+    val userId: StateFlow<String> = _userId
+
+    // 分页数据流，动态响应用户ID变化
+    val videoList: Flow<androidx.paging.PagingData<com.example.bilibili.data.model.VideoItem>> =
+        _userId.flatMapLatest { userId ->
+            Pager(
+                config = PagingConfig(
+                    pageSize = 20,
+                    enablePlaceholders = false,
+                    initialLoadSize = 20
+                ),
+                pagingSourceFactory = { HomeVideoPagingSource(userId) }
+            ).flow.cachedIn(viewModelScope)
+        }
 
     /**
-     * 一次性获取视频列表
+     * 设置用户ID并刷新数据
      */
-    fun fetchHomeVideos(userId: String) {
-        viewModelScope.launch {
-            try {
-                // 1. 调用接口（注意：这里的接口返回 String，需要解析）
-                val responseString = apiService.loadVideoList(userId = userId, type = 0)
-
-                // 2. 解析 JSON 逻辑（把你原来写在 PagingSource 里的逻辑挪到这里）
-                val list = parseVideoJson(responseString)
-
-                // 3. 更新 UI
-                _videoList.value = list
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+    fun setUserId(userId: String) {
+        if (_userId.value != userId) {
+            _userId.value = userId
         }
-    }
-
-    private fun parseVideoJson(json: String): List<VideoItem> {
-        val videoList = mutableListOf<VideoItem>()
-        val jsonObject = JSONObject(json)
-        if (jsonObject.optString("status") == "success") {
-            val dataObj = jsonObject.getJSONObject("data")
-            val jsonArray = dataObj.getJSONArray("list")
-            for (i in 0 until jsonArray.length()) {
-                val item = jsonArray.getJSONObject(i)
-                videoList.add(VideoItem(
-                    videoId = item.getString("videoId"),
-                    videoName = item.getString("videoName"),
-                    videoCover = item.getString("videoCover"),
-                    playCount = item.optInt("playCount"),
-                    commentCount = item.optInt("commentCount"),
-                    danmuCount = item.optInt("danmuCount"),
-                    duration = item.optInt("duration"),
-                    createTime = item.getString("createTime"),
-                    nickName = item.getString("nickName")
-                ))
-            }
-        }
-        return videoList
     }
 }

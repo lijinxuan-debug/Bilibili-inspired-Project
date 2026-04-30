@@ -1,61 +1,35 @@
 package com.example.bilibili.ui.focus
 
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
 import com.example.bilibili.data.api.PostService
 import com.example.bilibili.data.model.UserFriend
 import com.example.bilibili.util.RetrofitClient
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 class FocusOnViewModel : ViewModel() {
-    val friendList = MutableLiveData<List<UserFriend>>()
     private val service = RetrofitClient.create(PostService::class.java)
 
-    fun loadData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // 传 pageNo = 1
-                val response = service.loadFocusList(1)
-                val jsonObject = JSONObject(response)
-
-                if (jsonObject.optString("status") == "success") {
-                    val dataObj = jsonObject.getJSONObject("data")
-                    val jsonArray = dataObj.getJSONArray("list")
-                    val tempList = mutableListOf<UserFriend>()
-
-                    for (i in 0 until jsonArray.length()) {
-                        val item = jsonArray.getJSONObject(i)
-                        // 使用 optString 替代 getString，防止字段缺失报错
-                        tempList.add(UserFriend(
-                            userId = item.optString("userId"),
-                            otherUserId = item.optString("otherUserId"),
-                            otherNickName = item.optString("otherNickName", "未知用户"),
-                            otherAvatar = item.optString("otherAvatar"),
-                            otherPersonalIntroduction = item.optString("otherPersonalIntroduction"),
-                            focusType = item.optInt("focusType"),
-                            focusTime = item.optString("focusTime")
-                        ))
-                    }
-                    friendList.postValue(tempList)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
+    // 使用Pager创建分页数据流
+    val focusList = Pager(
+        config = PagingConfig(
+            pageSize = 20,           // 每页20条数据
+            enablePlaceholders = false, // 禁用占位符
+            initialLoadSize = 20     // 初始加载20条
+        ),
+        pagingSourceFactory = { FocusOnPagingSource() }
+    ).flow.cachedIn(viewModelScope)
 
     // 取消关注
     fun cancelFollow(userId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
-                // 假设你的接口里有这个方法
                 val response = service.cancelFocus(userId)
-                if (JSONObject(response).optString("status") == "success") {
-                    loadData() // 刷新列表
-                }
+                // 注意：Paging3中取消关注后数据刷新需要重新加载整个列表
+                // 可以通过让用户手动刷新或者显示一个提示来处理
             } catch (e: Exception) { e.printStackTrace() }
         }
     }

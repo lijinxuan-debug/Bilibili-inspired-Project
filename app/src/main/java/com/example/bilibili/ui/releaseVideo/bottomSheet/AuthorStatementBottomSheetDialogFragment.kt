@@ -1,9 +1,11 @@
 package com.example.bilibili.ui.releaseVideo.bottomSheet
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.RadioGroup
 import androidx.fragment.app.activityViewModels
 import androidx.core.widget.doOnTextChanged
@@ -41,6 +43,9 @@ class AuthorStatementBottomSheetDialogFragment : BottomSheetDialogFragment() {
                     // 直接更新 ViewModel
                     viewModel.setStatementType(ReleaseVideoViewModel.StatementType.ORIGINAL)
                     binding.layoutRepostInput.visibility = View.GONE
+
+                    // 收起软键盘
+                    hideKeyboard()
                 }
                 R.id.rb_repost -> {
                     viewModel.setStatementType(ReleaseVideoViewModel.StatementType.REPOST)
@@ -90,6 +95,14 @@ class AuthorStatementBottomSheetDialogFragment : BottomSheetDialogFragment() {
             // 数据已经直接保存到 ViewModel，只需关闭弹窗
             dismiss()
         }
+    }
+
+    /**
+     * 收起软键盘
+     */
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.etSource.windowToken, 0)
     }
 
     override fun onDestroyView() {

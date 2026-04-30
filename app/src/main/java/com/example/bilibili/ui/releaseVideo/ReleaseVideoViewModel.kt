@@ -144,10 +144,6 @@ class ReleaseVideoViewModel(application: Application): AndroidViewModel(applicat
             try {
                 val postService = RetrofitClient.create(PostService::class.java)
 
-                val FileService = RetrofitClient.create(FileService::class.java)
-                // TODO 上传图片封面
-
-
                 Log.d("PostVideo", "开始投稿视频")
                 Log.d("PostVideo", "上传信息 - uploadId: ${uploadInfo.uploadId}, fileName: ${uploadInfo.fileName}")
 

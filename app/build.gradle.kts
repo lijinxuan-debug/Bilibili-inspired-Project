@@ -76,7 +76,9 @@ dependencies {
     implementation(libs.xxpermissions)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.paging.runtime)
-    implementation(libs.bundles.video.player)
     implementation(libs.androidx.swiperefreshlayout)
-//    implementation(libs.bundles.danmaku.suite)
+    implementation(libs.danmaku.main)
+    implementation(libs.danmaku.ndk)
+    implementation(libs.gsyVideoPlayer.carguo)
+    implementation(libs.google.gson)
 }

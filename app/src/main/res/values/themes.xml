@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <style name="RoundedCorner_8dp">
+        <item name="cornerSize">8dp</item>
+    </style>
+
     <style name="Theme.Bilibili" parent="Theme.AppCompat.Light.NoActionBar" />
 
     <style name="BottomBarTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
@@ -66,6 +70,33 @@
         <item name="android:textSize">15sp</item>
         <item name="android:textStyle">normal</item>
         <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="PinkDialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="colorAccent">#FB7299</item>
+    </style>
+
+    <style name="SearchHistoryChipStyle" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="chipBackgroundColor">#F6F6F6</item>
+        <item name="chipCornerRadius">4dp</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="android:textColor">#333333</item>
+        <item name="android:textSize">13sp</item>
+        <item name="chipMinHeight">32dp</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxWidth">160dp</item>
+    </style>
+
+    <style name="Theme.Bilibili.Search" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">#FB7299</item>
+        <item name="colorPrimaryVariant">#FB7299</item>
+        <item name="colorSecondary">#FB7299</item>
+    </style>
+
+    <style name="BiliTabTextStyle" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">normal</item>
     </style>
 
 </resources>

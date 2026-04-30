@@ -1,54 +1,39 @@
 package com.example.bilibili.ui.personal.collect
 
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bilibili.data.api.PostService
-import com.example.bilibili.data.model.CollectVideo
-import com.example.bilibili.util.RetrofitClient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import org.json.JSONObject
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 
 class CollectViewModel : ViewModel() {
-    val collectVideos = MutableLiveData<List<CollectVideo>>()
+    // 当前用户ID
+    private val _userId = MutableStateFlow("")
+    val userId: StateFlow<String> = _userId
 
-    fun loadCollections(userId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // 1. 获取原始 String
-                val postService = RetrofitClient.create(PostService::class.java)
-                val responseString = postService.loadUserCollection(userId)
+    // 分页数据流，动态响应用户ID变化
+    val collectVideos: Flow<androidx.paging.PagingData<com.example.bilibili.data.model.CollectVideo>> =
+        _userId.flatMapLatest { userId ->
+            Pager(
+                config = PagingConfig(
+                    pageSize = 20,
+                    enablePlaceholders = false,
+                    initialLoadSize = 20
+                ),
+                pagingSourceFactory = { CollectPagingSource(userId) }
+            ).flow.cachedIn(viewModelScope)
+        }
 
-                // 2. 使用 org.json 解析
-                val root = JSONObject(responseString)
-                if (root.getString("status") == "success") {
-                    val dataObj = root.getJSONObject("data")
-                    val jsonArray = dataObj.getJSONArray("list")
-
-                    val list = mutableListOf<CollectVideo>()
-                    for (i in 0 until jsonArray.length()) {
-                        val item = jsonArray.getJSONObject(i)
-                        // 手动对应每一个字段
-                        val video = CollectVideo(
-                            actionId = item.getInt("actionId"),
-                            videoId = item.getString("videoId"),
-                            videoUserId = item.getString("videoUserId"),
-                            commentId = item.getInt("commentId"),
-                            actionType = item.getInt("actionType"),
-                            actionCount = item.getInt("actionCount"),
-                            userId = item.getString("userId"),
-                            actionTime = item.getString("actionTime"),
-                            videoCover = item.getString("videoCover"),
-                            videoName = item.getString("videoName")
-                        )
-                        list.add(video)
-                    }
-                    collectVideos.postValue(list)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+    /**
+     * 设置用户ID
+     */
+    fun setUserId(userId: String) {
+        if (_userId.value != userId) {
+            _userId.value = userId
         }
     }
 }

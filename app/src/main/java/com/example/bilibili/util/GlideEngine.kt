@@ -31,12 +31,33 @@ object GlideEngine : ImageEngine {
         maxWidth: Int,
         maxHeight: Int
     ) {
-        TODO("Not yet implemented")
+        if (!isContextValid(context) || imageView == null || url == null) return
+        try {
+            Glide.with(context!!)
+                .load(url)
+                .override(maxWidth, maxHeight)
+                .centerCrop()
+                .placeholder(R.drawable.ic_bili_placeholder)
+                .error(R.drawable.ic_bili_placeholder)
+                .into(imageView)
+        } catch (e: Exception) {
+            Log.e("GlideEngine", "加载图片失败: $url", e)
+        }
     }
 
     override fun loadAlbumCover(context: Context, url: String, imageView: ImageView) {
         if (!isContextValid(context)) return
-        Glide.with(context).asBitmap().load(url).centerCrop().into(imageView)
+        try {
+            Glide.with(context)
+                .asBitmap()
+                .load(url)
+                .centerCrop()
+                .placeholder(R.drawable.ic_bili_placeholder)
+                .error(R.drawable.ic_bili_placeholder)
+                .into(imageView)
+        } catch (e: Exception) {
+            Log.e("GlideEngine", "加载专辑封面失败: $url", e)
+        }
     }
 
     // 假设这是 GlideEngine.kt 里的代码
@@ -97,5 +118,9 @@ object GlideEngine : ImageEngine {
             .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade())
             .into(imageView)
     }
+
+    /**
+     * 加载预览图
+     */
 
 }

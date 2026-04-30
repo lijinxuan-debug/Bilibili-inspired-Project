@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:padding="12dp">
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cvCover"
+        android:layout_width="150dp"
+        android:layout_height="90dp"
+        app:cardCornerRadius="6dp"
+        app:cardElevation="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/ivVideoCover"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            tools:src="@tools:sample/backgrounds/scenic" />
+    </androidx.cardview.widget.CardView>
+
+    <TextView
+        android:id="@+id/tvVideoTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:lineSpacingExtra="2dp"
+        android:textColor="#18191C"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/cvCover"
+        app:layout_constraintTop_toTopOf="@+id/cvCover"
+        tools:text="上单老祖 上单王者SOLO赛 260420" />
+
+    <LinearLayout
+        android:id="@+id/ll_up_info"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/tvVideoTitle"
+        app:layout_constraintTop_toBottomOf="@+id/tvVideoTitle">
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_up_icon"
+            app:tint="#9499A0" />
+
+        <TextView
+            android:id="@+id/tvUpName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:textColor="#9499A0"
+            android:textSize="12sp"
+            tools:text="我永远喜欢森日向子" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_video_data"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="@+id/cvCover"
+        app:layout_constraintEnd_toStartOf="@+id/ivMore"
+        app:layout_constraintStart_toStartOf="@+id/tvVideoTitle">
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_play_count"
+            app:tint="#9499A0" />
+
+        <TextView
+            android:id="@+id/tvPlayCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:textColor="#9499A0"
+            android:textSize="12sp"
+            tools:text="1576" />
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_comment_count"
+            app:tint="#9499A0"
+
+            android:layout_marginStart="12dp"/>
+
+        <TextView
+            android:id="@+id/tvCommentCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:textColor="#9499A0"
+            android:textSize="12sp"
+            tools:text="88" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/ivMore"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="-4dp"
+        android:alpha="0.5"
+        android:src="@drawable/ic_more_vert"
+        app:layout_constraintBottom_toBottomOf="@+id/ll_video_data"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/ll_video_data" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

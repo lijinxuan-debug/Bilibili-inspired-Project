@@ -12,6 +12,7 @@ import org.json.JSONObject
 
 class FansViewModel : ViewModel() {
     val fanList = MutableLiveData<List<UserFriend>>()
+    val toastMessage = MutableLiveData<String>()
     private val service = RetrofitClient.create(PostService::class.java)
 
     fun loadData() {
@@ -53,9 +54,15 @@ class FansViewModel : ViewModel() {
             try {
                 val response = service.focus(userId)
                 if (JSONObject(response).optString("status") == "success") {
+                    toastMessage.postValue("回关成功")
                     loadData() // 刷新列表
+                } else {
+                    toastMessage.postValue("回关失败，请重试")
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                toastMessage.postValue("网络错误，请重试")
+            }
         }
     }
 }

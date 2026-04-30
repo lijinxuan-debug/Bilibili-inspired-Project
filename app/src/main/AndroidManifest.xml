@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -22,11 +23,14 @@
         android:theme="@style/Theme.Bilibili"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".ui.edit.EditActivity"
+            android:name=".ui.search.SearchActivity"
+            android:theme="@style/Theme.Bilibili.Search"
             android:exported="false" />
         <activity
             android:name=".ui.playVideo.PlayVideoActivity"
-            android:exported="false" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:screenOrientation="unspecified" />
         <activity
             android:name=".ui.releaseVideo.ReleaseVideoActivity"
             android:exported="false" />

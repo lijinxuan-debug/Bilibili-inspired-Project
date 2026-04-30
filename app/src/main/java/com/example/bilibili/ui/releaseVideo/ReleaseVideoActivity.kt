@@ -11,14 +11,25 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.doOnTextChanged
+import androidx.lifecycle.lifecycleScope
+import com.example.bilibili.data.api.FileService
 import com.example.bilibili.databinding.ActivityReleaseVideoBinding
 import com.example.bilibili.databinding.DialogAgreementBinding
 import com.example.bilibili.databinding.ItemSimpleTagBinding
 import com.example.bilibili.ui.releaseVideo.bottomSheet.AuthorStatementBottomSheetDialogFragment
 import com.example.bilibili.ui.releaseVideo.bottomSheet.IntroductionBottomSheetDialogFragment
 import com.example.bilibili.ui.releaseVideo.bottomSheet.TagBottomSheetDialogFragment
+import com.example.bilibili.util.RetrofitClient
+import com.example.bilibili.util.ToastUtils
 import com.example.bilibili.util.VideoThumbnailUtil
 import com.example.bilibili.util.UiUtils.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class ReleaseVideoActivity : AppCompatActivity() {
     private lateinit var binding: ActivityReleaseVideoBinding
@@ -121,6 +132,7 @@ class ReleaseVideoActivity : AppCompatActivity() {
             when (status) {
                 "投稿成功" -> {
                     // 投稿成功，显示成功提示并返回
+                    ToastUtils.showShort(this, "投稿成功")
                     Log.d("ReleaseVideo", "投稿成功")
                     finish()
                 }
@@ -129,8 +141,8 @@ class ReleaseVideoActivity : AppCompatActivity() {
                 }
                 else -> {
                     // 显示失败提示
+                    ToastUtils.showShort(this, status)
                     Log.e("ReleaseVideo", "投稿状态: $status")
-                    // 可以在这里显示Toast或其他提示
                 }
             }
         }
@@ -138,6 +150,15 @@ class ReleaseVideoActivity : AppCompatActivity() {
         // 监听选择的分区
         viewModel.selectedPartition.observe(this) { item ->
             binding.partition.text = item?.categoryName
+        }
+
+        // 监听创作声明类型变化
+        viewModel.statementType.observe(this) { type ->
+            val text = when (type) {
+                ReleaseVideoViewModel.StatementType.ORIGINAL -> "视频自制"
+                ReleaseVideoViewModel.StatementType.REPOST -> "视频转载"
+            }
+            binding.reprintOrMakeYourOwn.text = text
         }
 
         // 监听输入的标签
@@ -211,14 +232,80 @@ class ReleaseVideoActivity : AppCompatActivity() {
      */
     private fun extractVideoFirstFrame(videoPath: String) {
         try {
-            val firstFrameBitmap = VideoThumbnailUtil.getFirstFrameBitmap(videoPath)
-            if (firstFrameBitmap != null) {
-                // 设置视频第一帧为封面
-                binding.ivVideoCover.setImageBitmap(firstFrameBitmap)
-                Log.d("ReleaseVideo", "成功截取视频第一帧")
+            // 使用VideoThumbnailUtil获取第一帧并保存为文件
+            val coverImagePath = VideoThumbnailUtil.getFirstFrame(this, videoPath)
+            if (coverImagePath != null) {
+                // 设置视频第一帧为封面显示
+                val firstFrameBitmap = VideoThumbnailUtil.getFirstFrameBitmap(videoPath)
+                if (firstFrameBitmap != null) {
+                    binding.ivVideoCover.setImageBitmap(firstFrameBitmap)
+                }
+                Log.d("ReleaseVideo", "成功截取视频第一帧: $coverImagePath")
+
+                // 上传封面图片到后端
+                uploadCoverImage(coverImagePath)
             }
         } catch (e: Exception) {
             Log.e("ReleaseVideo", "截取视频第一帧失败", e)
+        }
+    }
+
+    /**
+     * 上传封面图片到后端
+     */
+    private fun uploadCoverImage(imagePath: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val fileService = RetrofitClient.create(FileService::class.java)
+                val imageFile = java.io.File(imagePath)
+
+                // 准备上传参数
+                val requestBody = imageFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                val imagePart = MultipartBody.Part.createFormData("file", imageFile.name, requestBody)
+                val createThumbnail = "true".toRequestBody("text/plain".toMediaTypeOrNull())
+
+                Log.d("ReleaseVideo", "开始上传封面图片: ${imageFile.name}")
+
+                // 上传图片
+                val response = fileService.postImage(imagePart, createThumbnail)
+                Log.d("ReleaseVideo", "封面上传结果: $response")
+
+                // 解析响应获取图片URL（假设后端返回JSON格式）
+                try {
+                    val responseJson = org.json.JSONObject(response)
+                    val imageUrl = responseJson.optString("data", "")
+                    val finalUrl = imageUrl.ifEmpty {
+                        // 如果无法解析URL，使用默认路径
+                        imageFile.name
+                    }
+
+                    // 在主线程更新LiveData
+                    withContext(Dispatchers.Main) {
+                        viewModel.setVideoCoverUrl(finalUrl)
+                    }
+
+                    if (imageUrl.isNotEmpty()) {
+                        Log.d("ReleaseVideo", "封面URL: $imageUrl")
+                    } else {
+                        Log.w("ReleaseVideo", "无法解析图片URL，使用文件名")
+                    }
+                } catch (_: Exception) {
+                    // JSON解析失败，使用默认路径
+                    // 在主线程更新LiveData
+                    withContext(Dispatchers.Main) {
+                        viewModel.setVideoCoverUrl(imageFile.name)
+                    }
+                    Log.w("ReleaseVideo", "响应解析失败，使用文件名: ${imageFile.name}")
+                }
+
+            } catch (e: Exception) {
+                Log.e("ReleaseVideo", "封面上传失败", e)
+                // 上传失败时使用默认封面
+                // 在主线程更新LiveData
+                withContext(Dispatchers.Main) {
+                    viewModel.setVideoCoverUrl("default_cover.jpg")
+                }
+            }
         }
     }
 

@@ -36,10 +36,12 @@
         android:layout_height="60dp"
         android:background="@null"
         android:hint="@string/input_email"
-        android:inputType="text"
+        android:inputType="textEmailAddress"
         android:textColorHint="#CCCCCC"
         android:textSize="16sp"
         android:autofillHints="emailAddress"
+        android:imeOptions="actionNext"
+        android:singleLine="true"
         app:layout_constraintBaseline_toBaselineOf="@+id/tv_label_account"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/tv_label_account" />
@@ -83,6 +85,8 @@
         android:textColorHint="#CCCCCC"
         android:textSize="16sp"
         android:autofillHints="password"
+        android:imeOptions="actionNext"
+        android:singleLine="true"
 
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/tv_label_password"

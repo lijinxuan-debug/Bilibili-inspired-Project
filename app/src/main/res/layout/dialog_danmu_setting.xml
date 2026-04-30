@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="#F6F7F8"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/top_et"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/white"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp">
+
+        <ImageView
+            android:id="@+id/iv_danmu_style_btn"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_danmu_style_a" />
+
+        <EditText
+            android:id="@+id/et_danmu_message"
+            android:layout_width="0dp"
+            android:layout_height="38dp"
+            android:layout_marginHorizontal="12dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_gray_input_field"
+            android:hint="发个友善的弹幕见证当下"
+            android:paddingHorizontal="16dp"
+            android:textColorHint="#9499A0"
+            android:textSize="14sp" />
+
+        <ImageView
+            android:id="@+id/iv_danmu_send"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_danmu_send" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="弹幕位置"
+            android:textColor="#9499A0"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/btn_pos_scroll"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:background="@drawable/sl_danmu_option_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_danmu_scroll"
+                    app:tint="@color/sl_danmu_pink_gray" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:duplicateParentState="true"
+                    android:text="滚动"
+                    android:textColor="@color/sl_danmu_pink_gray"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="12dp"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:id="@+id/btn_pos_top"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:background="@drawable/sl_danmu_option_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_danmu_top"
+                    app:tint="@color/sl_danmu_pink_gray" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:duplicateParentState="true"
+                    android:text="置顶"
+                    android:textColor="@color/sl_danmu_pink_gray"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="12dp"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:id="@+id/btn_pos_bottom"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:background="@drawable/sl_danmu_option_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:duplicateParentState="true"
+                    android:src="@drawable/ic_danmu_bottom"
+                    app:tint="@color/sl_danmu_pink_gray" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:duplicateParentState="true"
+                    android:text="置底"
+                    android:textColor="@color/sl_danmu_pink_gray"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="弹幕颜色"
+            android:textColor="#9499A0"
+            android:textSize="14sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_danmu_colors"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:overScrollMode="never"
+            tools:listitem="@layout/item_danmu_color"/>
+
+    </LinearLayout>
+</LinearLayout>

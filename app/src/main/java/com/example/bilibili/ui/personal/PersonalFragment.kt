@@ -1,5 +1,6 @@
 package com.example.bilibili.ui.personal
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -8,14 +9,17 @@ import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import com.example.bilibili.R
 import com.example.bilibili.data.api.PostService
 import com.example.bilibili.databinding.FragmentPersonalBinding
+import com.example.bilibili.ui.login.LoginActivity
 import com.example.bilibili.ui.personal.collect.CollectFragment
 import com.example.bilibili.ui.personal.contribute.ContributeFragment
 import com.example.bilibili.ui.personal.home.HomeFragment
 import com.example.bilibili.util.GlideEngine
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.SPUtils
+import com.example.bilibili.util.ToastUtils
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -72,6 +76,24 @@ class PersonalFragment : Fragment() {
             } finally {
                 binding.loadingView.visibility = View.GONE
             }
+        }
+
+        binding.btnLogout.setOnClickListener {
+            androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.PinkDialogTheme)
+                .setTitle("提示")
+                .setMessage("确定要退出登录吗？")
+                .setPositiveButton("确定") { _, _ ->
+                    SPUtils.cleanToken()
+                    ToastUtils.showShort(requireContext(), "已退出登录")
+
+                    val intent = Intent(requireContext(), LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+
+                    requireActivity().finish()
+                }
+                .setNegativeButton("取消", null)
+                .show()
         }
     }
 

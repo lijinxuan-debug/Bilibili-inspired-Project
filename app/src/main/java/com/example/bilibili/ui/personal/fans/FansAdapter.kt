@@ -28,17 +28,28 @@ class FansAdapter(
         // 1. 加载头像和文本信息
         GlideEngine.loadUserAvatar(binding.root.context, user.otherAvatar, binding.ivAvatar)
         binding.tvNickname.text = user.otherNickName
-        binding.tvDescription.text = user.otherPersonalIntroduction
+        binding.tvDescription.text = if (!user.otherPersonalIntroduction.isNullOrBlank() && user.otherPersonalIntroduction != "null") {
+            user.otherPersonalIntroduction
+        } else {
+            ""
+        }
 
-        // 2. 粉丝列表状态判断：只有"回关"按钮
+        // 2. 粉丝列表状态判断：根据focusType显示不同状态
         binding.btnFollowAction.apply {
-            // 样式统一：粉色文字 + 粉色边框 + 加号图标
-            setTextColor(Color.parseColor("#FB7299"))
-            setBackgroundResource(R.drawable.shape_follow_btn_pink)
-            setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-
-            // 粉丝列表通常显示"回关"按钮
-            text = "回关"
+            when (user.focusType) {
+                1 -> {
+                    // 互相关注
+                    setTextColor(Color.parseColor("#999999"))
+                    setBackgroundResource(R.drawable.shape_follow_btn_grey)
+                    text = "互相关注"
+                }
+                else -> {
+                    // 可以回关
+                    setTextColor(Color.parseColor("#FB7299"))
+                    setBackgroundResource(R.drawable.shape_follow_btn_pink)
+                    text = "回关"
+                }
+            }
         }
 
         // 3. 点击回调：在粉丝列表点这个通常是执行"回关"

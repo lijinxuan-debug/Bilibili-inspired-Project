@@ -18,11 +18,14 @@ glide = "4.12.0"
 commonsCodec = "1.15"
 securityCrypto = "1.1.0-alpha06"
 pictureselector = "v3.11.2"
-media3 = "1.5.0"
 xxpermissions = "20.0"
 paging = "3.3.0"
-danmaku-stable = "0.9.21"
 swiperefreshlayout = "1.1.0"
+dkplayer = "3.3.7"
+gsyVideoPlayer = "12.1.0"
+danmaku = "0.9.25"
+danmaku-ndk = "0.9.21"
+gson = "2.10.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,22 +55,17 @@ common-codec = { group = "commons-codec", name = "commons-codec", version.ref = 
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 pictureselector-core = { group = "io.github.lucksiege", name = "pictureselector", version.ref = "pictureselector" }
 pictureselector-compress = { group = "io.github.lucksiege", name = "compress", version.ref = "pictureselector" }
-androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
-androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
-androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
 xxpermissions = { group = "com.github.getActivity", name = "XXPermissions", version.ref = "xxpermissions" }
 androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version = "1.6.2" }
 androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
 androidx-paging-common = { group = "androidx.paging", name = "paging-common", version.ref = "paging" }
-danmaku-main = { group = "com.github.ctiao", name = "DanmakuFlameMaster", version.ref = "danmaku-stable" }
-danmaku-ndk = { group = "com.github.ctiao", name = "ndkbitmap-armv7a", version.ref = "danmaku-stable" }
 androidx-swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
+gsyVideoPlayer-carguo = { group = "io.github.carguo", name = "gsyvideoplayer", version.ref = "gsyVideoPlayer" }
+danmaku-main = { group = "com.github.ctiao", name = "DanmakuFlameMaster", version.ref = "danmaku" }
+danmaku-ndk = { group = "com.github.ctiao", name = "ndkbitmap-armv7a", version.ref = "danmaku-ndk" }
+google-gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-
-[bundles]
-video-player = ["androidx-media3-exoplayer", "androidx-media3-ui", "androidx-media3-exoplayer-hls"]
-danmaku-suite = ["danmaku-main", "danmaku-ndk"]

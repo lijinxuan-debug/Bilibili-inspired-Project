@@ -16,9 +16,12 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
         maven { url = uri("https://jitpack.io") }
     }
 }
 
 rootProject.name = "bilibili"
 include(":app")
+include(":dkplayer-java")
+include(":dkplayer-ui")

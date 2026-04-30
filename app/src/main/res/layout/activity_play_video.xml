@@ -7,237 +7,139 @@
     android:background="@color/white">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"
         app:elevation="0dp">
 
-        <androidx.media3.ui.PlayerView
-            android:id="@+id/player_view"
-            android:layout_width="match_parent"
-            android:layout_height="520dp"
-            android:background="#000000"
-            app:layout_constraintBottom_toTopOf="@+id/layout_author_info"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:use_controller="true" />
-
-        <RelativeLayout
-            android:id="@+id/layout_author_info"
+        <com.google.android.material.appbar.CollapsingToolbarLayout
+            android:id="@+id/collapsing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="12dp">
+            app:layout_scrollFlags="scroll|exitUntilCollapsed">
 
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/iv_avatar"
-                android:layout_width="45dp"
-                android:layout_height="45dp"
-                android:scaleType="centerCrop"
-                app:shapeAppearanceOverlay="@style/CircleImage"
-                tools:src="@tools:sample/avatars" />
+            <FrameLayout
+                android:id="@+id/player_container"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:background="#000000"
+                app:layout_collapseMode="parallax">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:layout_marginStart="12dp"
-                android:layout_toEndOf="@id/iv_avatar"
-                android:orientation="vertical">
+                <com.example.bilibili.ui.playVideo.DanmakuVideoPlayer
+                    android:id="@+id/video_player"
+                    android:layout_width="match_parent"
+                    android:layout_height="250dp" />
 
-                <TextView
-                    android:id="@+id/tv_author_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="小清Eric"
-                    android:textColor="#FB7299"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+            </FrameLayout>
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/sticky_toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                app:contentInsetStart="0dp"
+                app:layout_collapseMode="pin">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <ImageView
+                        android:id="@+id/iv_sticky_back"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:padding="12dp"
+                        android:src="@drawable/ic_back_arrow"
+                        app:tint="@color/white" />
 
                     <TextView
-                        android:id="@+id/tv_fans_count"
+                        android:id="@+id/tv_sticky_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="5.9万粉丝"
-                        android:textColor="#999999"
-                        android:textSize="12sp" />
+                        android:layout_centerInParent="true"
+                        android:alpha="0"
+                        android:text="继续播放"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </RelativeLayout>
+            </androidx.appcompat.widget.Toolbar>
 
-                </LinearLayout>
-            </LinearLayout>
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
 
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/btn_follow"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:background="@drawable/bg_follow_button"
-                android:gravity="center"
-                android:paddingLeft="16dp"
-                android:paddingRight="16dp"
-                android:text="+ 关注"
-                android:textColor="@color/white"
-                android:textSize="13sp" />
-        </RelativeLayout>
-
-        <LinearLayout
+        <RelativeLayout
+            android:id="@+id/tab_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp"
-            android:paddingBottom="12dp">
+            android:paddingEnd="12dp"
+            android:layout_gravity="bottom">
 
-            <TextView
-                android:id="@+id/tv_video_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="深思熟虑之后，我裸辞了"
-                android:textColor="#212121"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/video_tab_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:background="@color/white"
+                app:tabGravity="start"
+                app:tabIndicatorColor="#FB7299"
+                app:tabIndicatorFullWidth="false"
+                app:tabIndicatorHeight="2.5dp"
+                app:tabMinWidth="80dp"
+                app:tabMode="fixed"
+                app:tabPaddingEnd="12dp"
+                app:tabPaddingStart="12dp"
+                app:tabRippleColor="@android:color/transparent"
+                app:tabSelectedTextColor="#FB7299"
+                app:tabTextAppearance="@style/BiliTabTextStyle"
+                app:tabTextColor="#61666D">
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="简介" />
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="评论 204" />
+
+            </com.google.android.material.tabs.TabLayout>
 
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/bg_barrage_input"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:paddingHorizontal="12dp">
 
                 <TextView
-                    android:id="@+id/tv_play_count"
+                    android:id="@+id/danmu"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_play_count"
-                    android:drawablePadding="4dp"
-                    android:gravity="center"
-                    android:text="7.2万"
+                    android:text="点我发弹幕"
                     android:textColor="#999999"
-                    android:textSize="14sp"
-                    app:drawableTint="#999999" />
+                    android:textSize="12sp" />
 
-                <TextView
-                    android:id="@+id/tv_danmaku_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:drawableStart="@drawable/ic_comment_count"
-                    android:drawablePadding="4dp"
-                    android:gravity="center"
-                    android:text="211"
-                    android:textColor="#999999"
-                    android:textSize="14sp"
-                    app:drawableTint="#999999" />
-
-                <TextView
-                    android:id="@+id/tv_post_time"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:text="2026年4月22日 01:21"
-                    android:textColor="#999999"
-                    android:textSize="14sp" />
-
-            </LinearLayout>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="70dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingLeft="8dp"
-            android:paddingRight="8dp">
-
-            <LinearLayout
-                android:id="@+id/ll_like"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="14dp"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="#E3E5E7" />
 
                 <ImageView
-                    android:id="@+id/ll_like_icon"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:src="@drawable/ic_like_outline"
-                    app:tint="@color/ic_action_tint" />
-
-                <TextView
-                    android:id="@+id/ll_like_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="7292"
-                    android:textColor="#999999"
-                    android:textSize="11sp" />
+                    android:id="@+id/iv_danmu_switch"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/sl_danmu_switch" />
             </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/ll_coin"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:id="@+id/ll_coin_icon"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:src="@drawable/ic_coin_outline"
-                    app:tint="@color/ic_action_tint" />
-
-                <TextView
-                    android:id="@+id/ll_coin_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="1516"
-                    android:textColor="#999999"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/ll_fav"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:id="@+id/ll_fav_icon"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:src="@drawable/ic_star_outline"
-                    app:tint="@color/ic_action_tint" />
-
-                <TextView
-                    android:id="@+id/ll_fav_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="1638"
-                    android:textColor="#999999"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#EEEEEE" />
-
+        </RelativeLayout>
     </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/view_pager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

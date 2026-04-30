@@ -217,8 +217,7 @@
                     android:id="@+id/reprintOrMakeYourOwn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-
-                    android:text="视频为转载" />
+                    android:text="视频自制" />
 
                 <ImageView
                     android:layout_width="16dp"

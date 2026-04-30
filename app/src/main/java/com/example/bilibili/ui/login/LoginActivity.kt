@@ -5,7 +5,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Base64
 import android.util.Patterns
+import android.view.KeyEvent
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -177,6 +179,33 @@ class LoginActivity : AppCompatActivity() {
                 checkInputs(editTexts)
             }
         }
+
+        // 监听邮箱输入框的IME动作（回车键）
+        binding.etAccount.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT ||
+                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
+                // 跳转到密码输入框
+                binding.etPassword.requestFocus()
+                return@setOnEditorActionListener true
+            }
+            false
+        }
+
+        // 监听密码输入框的IME动作（回车键）
+        binding.etPassword.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT ||
+                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
+                // 跳转到验证码输入框
+                binding.etCaptcha.requestFocus()
+                // 显示软键盘
+                binding.etCaptcha.post {
+                    val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                    imm.showSoftInput(binding.etCaptcha, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                }
+                return@setOnEditorActionListener true
+            }
+            false
+        }
     }
 
     /**
@@ -217,7 +246,9 @@ class LoginActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                ToastUtils.showShort(this@LoginActivity,"网络出现异常")
+                // 自动登录失败，清除无效的token
+                SPUtils.cleanToken()
+                ToastUtils.showShort(this@LoginActivity,"登录已过期，请重新登录")
             }
         }
     }

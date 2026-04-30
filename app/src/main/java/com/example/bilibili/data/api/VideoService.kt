@@ -27,4 +27,18 @@ interface VideoService {
     suspend fun loadVideoPList(
         @Field("videoId") videoId: String
     ): String
+
+    // 获取热搜词语
+    @POST("video/getHotWordTop")
+    suspend fun getHotWordTop(): String
+
+    // 搜索词语
+    @POST("video/search")
+    @FormUrlEncoded
+    suspend fun search(
+        @Field("pageNo") pageNo: Int? = null,
+        @Field("keyword") keyword: String,
+        @Field("orderType") orderType: Int? = null
+    ): String
+
 }

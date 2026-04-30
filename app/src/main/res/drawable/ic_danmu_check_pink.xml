@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <!-- 外圈圆形 -->
+    <path
+        android:fillColor="@color/pink_brand"
+        android:pathData="M512,64c-249.856,0 -448,198.656 -448,448s198.656,448 448,448 448,-198.656 448,-448S761.856,64 512,64z" />
+
+    <!-- 对勾 -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M780.8,403.456 L460.8,672.256
+                          c-6.656,6.656 -12.8,6.656 -25.6,6.656
+                          -6.656,0 -19.456,-6.656 -25.6,-12.8
+                          l-121.344,-153.6
+                          c-12.8,-12.8 -6.656,-32.256 6.656,-45.056
+                          12.8,-12.8 32.256,-6.656 45.056,6.656
+                          l109.056,128
+                          L742.4,351.744
+                          c12.8,-12.8 32.256,-6.656 45.056,6.656
+                          C800.256,371.2 793.6,390.656 780.8,403.456z" />
+</vector>

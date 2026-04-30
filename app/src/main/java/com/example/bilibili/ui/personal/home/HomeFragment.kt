@@ -7,13 +7,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.example.bilibili.data.api.PostService
+import androidx.paging.LoadState
 import com.example.bilibili.databinding.FragmentHomeBinding
 import com.example.bilibili.ui.playVideo.PlayVideoActivity
-import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.SPUtils
 import kotlinx.coroutines.launch
 
@@ -21,18 +18,8 @@ class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
 
+    private val viewModel: HomeViewModel by viewModels()
     private lateinit var videoAdapter: HomeVideoAdapter
-    private val viewModel: HomeViewModel by viewModels {
-        object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                // 先得到service实例
-                val apiService = RetrofitClient.create(PostService::class.java)
-
-                // 返回创建好的 ViewModel
-                return HomeViewModel(apiService) as T
-            }
-        }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -41,6 +28,8 @@ class HomeFragment : Fragment() {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
+
+    private var isFirstLoad = true
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -55,15 +44,53 @@ class HomeFragment : Fragment() {
 
         binding.rvHomeVideo.adapter = videoAdapter
 
-        // 1. 观察数据
+        // 设置用户ID
+        val userId = SPUtils.getUserId()
+        viewModel.setUserId(userId)
+
+        // 设置下拉刷新
+        binding.swipeRefresh.setColorSchemeColors(android.graphics.Color.parseColor("#FB7299"))
+        binding.swipeRefresh.setOnRefreshListener {
+            videoAdapter.refresh()
+        }
+
+        // 监听分页数据流
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.videoList.collect { list ->
-                videoAdapter.submitList(list)
+            viewModel.videoList.collect { pagingData ->
+                videoAdapter.submitData(pagingData)
             }
         }
 
-        // 2. 主动触发一次加载
-        viewModel.fetchHomeVideos(SPUtils.getUserId())
+        // 监听加载状态
+        viewLifecycleOwner.lifecycleScope.launch {
+            videoAdapter.loadStateFlow.collect { loadState ->
+                // 处理下拉刷新状态
+                binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
+
+                // 可以在这里显示加载状态
+                when (loadState.refresh) {
+                    is LoadState.Loading -> {
+                        // 显示加载中
+                    }
+                    is LoadState.NotLoading -> {
+                        // 加载完成
+                    }
+                    is LoadState.Error -> {
+                        // 显示错误信息
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 在Fragment可见时刷新数据
+        if (!isFirstLoad) {
+            videoAdapter.refresh()
+        } else {
+            isFirstLoad = false
+        }
     }
 
     override fun onDestroyView() {

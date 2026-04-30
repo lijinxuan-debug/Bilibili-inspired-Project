@@ -7,7 +7,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.bilibili.R
 import com.example.bilibili.databinding.FragmentFansBinding
+import com.example.bilibili.util.ToastUtils
 
 class FansFragment : Fragment() {
     private var _binding: FragmentFansBinding? = null
@@ -26,8 +28,15 @@ class FansFragment : Fragment() {
 
         // 1. 初始化适配器
         fansAdapter = FansAdapter(emptyList()) { user ->
-            // 这里执行点击按钮后的逻辑：通常是弹出对话框确认是否回关
-            viewModel.followBack(user.otherUserId)
+            // 弹出确认对话框
+            androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.PinkDialogTheme)
+                .setTitle("回关用户")
+                .setMessage("确定要回关 ${user.otherNickName} 吗？")
+                .setPositiveButton("确定") { _, _ ->
+                    viewModel.followBack(user.otherUserId)
+                }
+                .setNegativeButton("取消", null)
+                .show()
         }
 
         // 2. 设置 RecyclerView
@@ -41,7 +50,12 @@ class FansFragment : Fragment() {
             binding.tvCountNumber.text = "${list.size}人"
         }
 
-        // 4. 加载数据
+        // 4. 观察Toast消息
+        viewModel.toastMessage.observe(viewLifecycleOwner) { message ->
+            ToastUtils.showShort(requireContext(), message)
+        }
+
+        // 5. 加载数据
         viewModel.loadData()
     }
 

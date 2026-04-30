@@ -34,6 +34,6 @@ interface FileService {
     @Multipart
     suspend fun postImage(
         @Part file: MultipartBody.Part,
-        @Part createThumbnail: RequestBody
+        @Part("createThumbnail") createThumbnail: RequestBody
     ): String
 }
