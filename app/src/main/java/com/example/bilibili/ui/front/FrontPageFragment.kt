@@ -106,15 +106,6 @@ class FrontPageFragment : Fragment() {
             // 这种计算方式会让搜索栏在滑到一半时就几乎看不见了，
             // 给人一种"在刘海前隐去"的视觉错觉，而不是"钻进刘海"
             binding.top.alpha = (1f - fraction * 1.2f).coerceAtLeast(0f)
-
-            // 同时处理右侧小搜索图标
-            if (fraction > 0.7f) {
-                binding.ivSmallSearch.alpha = (fraction - 0.7f) * 3.3f
-                binding.ivSmallSearch.visibility = View.VISIBLE
-            } else {
-                binding.ivSmallSearch.alpha = 0f
-                binding.ivSmallSearch.visibility = View.GONE
-            }
         }
     }
 
