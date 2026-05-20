@@ -1,5 +1,6 @@
 package com.example.bilibili.ui.memberShip
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -14,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.bilibili.R
 import com.example.bilibili.data.model.UserFriend
 import com.example.bilibili.databinding.FragmentMemberShipBinding
+import com.example.bilibili.ui.user.UserProfileActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -33,13 +35,16 @@ class MemberShipFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         // 1. 初始化适配器
-        fansAdapter = FansPagingAdapter { user ->
-            if (user.focusType == 0) {
-                showFollowConfirmDialog(user)
-            } else {
-                showCancelFollowDialog(user)
-            }
-        }
+        fansAdapter = FansPagingAdapter(
+            onActionClick = { user ->
+                if (user.focusType == 0) {
+                    showFollowConfirmDialog(user)
+                } else {
+                    showCancelFollowDialog(user)
+                }
+            },
+            onUserClick = { user -> openUserProfile(user.otherUserId) }
+        )
 
         // 2. 设置 RecyclerView 和 SwipeRefresh
         binding.rvFans.apply {
@@ -67,6 +72,15 @@ class MemberShipFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun openUserProfile(userId: String) {
+        if (userId.isEmpty()) return
+        startActivity(
+            Intent(requireContext(), UserProfileActivity::class.java).apply {
+                putExtra("user_id", userId)
+            }
+        )
     }
 
     /**

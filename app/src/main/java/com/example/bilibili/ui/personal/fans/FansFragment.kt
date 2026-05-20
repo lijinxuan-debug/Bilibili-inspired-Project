@@ -1,5 +1,6 @@
 package com.example.bilibili.ui.personal.fans
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,6 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.bilibili.R
 import com.example.bilibili.databinding.FragmentFansBinding
+import com.example.bilibili.ui.user.UserProfileActivity
 import com.example.bilibili.util.ToastUtils
 
 class FansFragment : Fragment() {
@@ -27,17 +29,20 @@ class FansFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         // 1. 初始化适配器
-        fansAdapter = FansAdapter(emptyList()) { user ->
-            // 弹出确认对话框
-            androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.PinkDialogTheme)
-                .setTitle("回关用户")
-                .setMessage("确定要回关 ${user.otherNickName} 吗？")
-                .setPositiveButton("确定") { _, _ ->
-                    viewModel.followBack(user.otherUserId)
-                }
-                .setNegativeButton("取消", null)
-                .show()
-        }
+        fansAdapter = FansAdapter(
+            list = emptyList(),
+            onBtnClick = { user ->
+                androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.PinkDialogTheme)
+                    .setTitle("回关用户")
+                    .setMessage("确定要回关 ${user.otherNickName} 吗？")
+                    .setPositiveButton("确定") { _, _ ->
+                        viewModel.followBack(user.otherUserId)
+                    }
+                    .setNegativeButton("取消", null)
+                    .show()
+            },
+            onUserClick = { user -> openUserProfile(user.otherUserId) }
+        )
 
         // 2. 设置 RecyclerView
         binding.rvFans.layoutManager = LinearLayoutManager(requireContext())
@@ -57,6 +62,15 @@ class FansFragment : Fragment() {
 
         // 5. 加载数据
         viewModel.loadData()
+    }
+
+    private fun openUserProfile(userId: String) {
+        if (userId.isEmpty()) return
+        startActivity(
+            Intent(requireContext(), UserProfileActivity::class.java).apply {
+                putExtra("user_id", userId)
+            }
+        )
     }
 
     override fun onDestroyView() {

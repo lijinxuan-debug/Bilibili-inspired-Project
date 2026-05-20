@@ -11,8 +11,8 @@ import com.example.bilibili.data.api.UserActionService
 import com.example.bilibili.data.api.VideoService
 import com.example.bilibili.data.model.CommentDataContainer
 import com.example.bilibili.data.model.CommentItem
-import com.example.bilibili.data.model.CommentResponse
 import com.example.bilibili.data.model.DanmuEntity
+import com.example.bilibili.data.model.PreviewConfigEntity
 import com.example.bilibili.util.RetrofitClient
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -61,14 +61,36 @@ class PlayVideoViewModel : ViewModel() {
     val commentListLive = MutableLiveData<List<CommentItem>>()
     val isCommentLoading = MutableLiveData<Boolean>()
     val commentTotalCount = MutableLiveData<Int>()
+    /** 评论排序：0-按热度，1-按时间 */
+    val commentOrderTypeLive = MutableLiveData(0)
+    private var commentOrderType: Int
+        get() = commentOrderTypeLive.value ?: 0
+        set(value) { commentOrderTypeLive.value = value }
 
     // 发布评论的回调
     val postCommentResult = MutableLiveData<Boolean>()
 
+    // 1. 在 PlayVideoViewModel 中新增一个数据发射源
+    val previewConfigLive = MutableLiveData<PreviewConfigEntity>()
+
     /**
-     * 1. 仿照原 Activity：加载视频详情、作者信息、播放地址
+     * 上报视频播放（增加播放量、更新在线人数），需传分P的 fileId 而非 videoId
      */
+    fun reportVideoPlayOnline(fileId: String, deviceId: String) {
+        if (fileId.isBlank() || deviceId.isBlank()) return
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    videoService.reportVideoPlayOnline(fileId, deviceId)
+                }
+            } catch (e: Exception) {
+                Log.e("PlayVideo", "reportVideoPlayOnline failed: ${e.message}")
+            }
+        }
+    }
+
     fun fetchAllData(videoId: String) {
+        commentOrderType = 0
         viewModelScope.launch {
             try {
                 // 并发请求：视频详情 + 分P列表
@@ -88,6 +110,21 @@ class PlayVideoViewModel : ViewModel() {
                     videoDetailLive.postValue(videoInfo)
                     userActionsLive.postValue(data.optJSONArray("userActionList"))
 
+                    // 提取雪碧图相关设置
+                    if (data.has("previewConfig")) {
+                        val configJson = data.getJSONObject("previewConfig")
+                        val entity = PreviewConfigEntity(
+                            url = configJson.optString("url"),
+                            total = configJson.optInt("total", 400),
+                            col = configJson.optInt("col", 10),
+                            row = configJson.optInt("row", 40),
+                            frameW = configJson.optInt("frameW", 160),
+                            frameH = configJson.optInt("frameH", 90),
+                            interval = configJson.optDouble("interval", 0.0) // 动态抓取变化的值
+                        )
+                        previewConfigLive.postValue(entity)
+                    }
+
                     // 拿到 userId 去请求作者信息
                     val userId = videoInfo.getString("userId")
                     val uRes = withContext(Dispatchers.IO) { postService.getUserInfo(userId) }
@@ -101,18 +138,18 @@ class PlayVideoViewModel : ViewModel() {
                     if (dataArray.length() > 0) {
                         val fileId = dataArray.getJSONObject(0).optString("fileId")
                         fileIdLive.postValue(fileId)
-                        // 拼接 m3u8 地址
-                        videoUrlLive.postValue("${RetrofitClient.BASE_URL}file/videoResource/$fileId/index.m3u8")
+                        videoUrlLive.postValue(
+                            "${RetrofitClient.BASE_URL}file/videoResource/$fileId/index.m3u8"
+                        )
                         // 解析弹幕信息
                         launch(Dispatchers.IO) {
                             try {
                                 val danmuRes = danmuService.loadDanmu(fileId, videoId)
                                 val danmuList = parseDanmuList(danmuRes)
-                                // 假设你有一个 danmuListLive 来存放结果
                                 danmuListLive.postValue(danmuList)
                             } catch (e: Exception) {
                                 e.printStackTrace()
-                                // 弹幕加载失败通常不影响视频播放，这里可以静默处理或报个小错
+                                danmuListLive.postValue(emptyList())
                             }
                         }
                     }
@@ -160,15 +197,106 @@ class PlayVideoViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                val response = withContext(Dispatchers.IO) {
                     actionService.doAction(videoId, type, count)
                 }
+                val root = JSONObject(response)
+                if (root.optInt("code") != 200) {
+                    errorLive.postValue(root.optString("message", "操作失败"))
+                    onSuccess(false)
+                    return@launch
+                }
+                syncUserActionsAfterVideoAction(videoId, type, count ?: 1)
                 onSuccess(true)
             } catch (e: Exception) {
                 errorLive.postValue("操作失败")
                 onSuccess(false)
             }
         }
+    }
+
+    /**
+     * 三连操作成功后同步 userActionList；若接口未返回投币等记录则本地补全，避免重进页面状态丢失
+     */
+    private suspend fun syncUserActionsAfterVideoAction(
+        videoId: String,
+        actionType: Int,
+        actionCount: Int
+    ) {
+        try {
+            val infoRes = videoService.getVideoInfo(videoId)
+            val root = JSONObject(infoRes)
+            if (root.optInt("code") == 200) {
+                val data = root.getJSONObject("data")
+                videoDetailLive.postValue(data.getJSONObject("videoInfo"))
+                var actions = data.optJSONArray("userActionList") ?: JSONArray()
+                if (actionType == 4 && !containsVideoAction(actions, actionType)) {
+                    actions = mergeVideoAction(actions, actionType, actionCount, videoId)
+                }
+                userActionsLive.postValue(actions)
+                return
+            }
+        } catch (e: Exception) {
+            Log.e("PlayVideo", "syncUserActions failed: ${e.message}")
+        }
+        if (actionType == 4) {
+            userActionsLive.postValue(
+                mergeVideoAction(userActionsLive.value ?: JSONArray(), actionType, actionCount, videoId)
+            )
+        }
+    }
+
+    private fun containsVideoAction(actions: JSONArray, actionType: Int): Boolean {
+        for (i in 0 until actions.length()) {
+            val item = actions.getJSONObject(i)
+            if (isCommentAction(item)) continue
+            if (item.optInt("actionType") == actionType) return true
+        }
+        return false
+    }
+
+    private fun mergeVideoAction(
+        actions: JSONArray,
+        actionType: Int,
+        actionCount: Int,
+        videoId: String
+    ): JSONArray {
+        val result = JSONArray()
+        var merged = false
+        for (i in 0 until actions.length()) {
+            val item = actions.getJSONObject(i)
+            if (isCommentAction(item)) {
+                result.put(item)
+                continue
+            }
+            if (item.optInt("actionType") == actionType) {
+                result.put(
+                    JSONObject().apply {
+                        put("actionType", actionType)
+                        put("actionCount", actionCount)
+                        put("videoId", videoId)
+                    }
+                )
+                merged = true
+            } else {
+                result.put(item)
+            }
+        }
+        if (!merged) {
+            result.put(
+                JSONObject().apply {
+                    put("actionType", actionType)
+                    put("actionCount", actionCount)
+                    put("videoId", videoId)
+                }
+            )
+        }
+        return result
+    }
+
+    private fun isCommentAction(item: JSONObject): Boolean {
+        if (item.isNull("commentId")) return false
+        return item.optInt("commentId", 0) > 0
     }
 
     // 发送指定的弹幕
@@ -181,7 +309,7 @@ class PlayVideoViewModel : ViewModel() {
                     mode = entity.mode,
                     color = entity.color,
                     time = entity.time,
-                    field = entity.fileId, // 注意：接口里的 field 对应实体里的 fileId
+                    fileId = entity.fileId, // 注意：接口里的 field 对应实体里的 fileId
                     videoId = entity.videoId
                 )
                 // 发送成功后的处理，比如打印个日志
@@ -199,12 +327,17 @@ class PlayVideoViewModel : ViewModel() {
     /**
      * 加载评论及其关联的用户行为状态
      */
+    fun toggleCommentOrderType(videoId: String) {
+        commentOrderType = if (commentOrderType == 0) 1 else 0
+        fetchComments(videoId)
+    }
+
     fun fetchComments(videoId: String) {
         viewModelScope.launch {
             try {
                 // 1. 获取原始 JSON 字符串
                 val jsonString = withContext(Dispatchers.IO) {
-                    commentService.loadComment(videoId, 1, 0)
+                    commentService.loadComment(videoId, 1, commentOrderType)
                 }
 
                 val root = JSONObject(jsonString)
@@ -234,7 +367,7 @@ class PlayVideoViewModel : ViewModel() {
                     }
                 }
 
-                // 6. 最终提交给 UI 观察
+                // 6. 使用服务端返回的排序（orderType: 0-热度，1-时间）
                 commentListLive.postValue(allComments)
 
             } catch (e: Exception) {
@@ -325,17 +458,14 @@ class PlayVideoViewModel : ViewModel() {
     }
 
     /**
-     * 评论点赞/踩操作
-     * @param videoId 视频ID
-     * @param commentId 评论ID
+     * 评论点赞/踩操作（不刷新整表，由 UI 层乐观更新）
      * @param actionType 操作类型：0-点赞，1-踩
-     * @param onSuccess 成功回调，返回新的点赞数
      */
     fun doCommentAction(
         videoId: String,
         commentId: Int,
         actionType: Int,
-        onSuccess: (Int, Boolean) -> Unit
+        onResult: (Boolean) -> Unit
     ) {
         viewModelScope.launch {
             try {
@@ -347,22 +477,11 @@ class PlayVideoViewModel : ViewModel() {
                         commentId = commentId
                     )
                 }
-                // 成功后重新加载评论列表，获取最新的点赞数和状态
-                fetchComments(videoId)
-                // 这里应该从新的评论列表中找到对应评论的新点赞数
-                // 为了简化，暂时返回当前值
-                val currentList = commentListLive.value ?: emptyList()
-                val comment = currentList.find { it.commentId == commentId }
-                val newCount = if (actionType == 0) {
-                    comment?.likeCount ?: 0
-                } else {
-                    comment?.hateCount ?: 0
-                }
-                onSuccess(newCount, true)
+                onResult(true)
             } catch (e: Exception) {
                 e.printStackTrace()
                 errorLive.postValue("操作失败: ${e.message}")
-                onSuccess(0, false)
+                onResult(false)
             }
         }
     }

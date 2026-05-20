@@ -15,6 +15,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.example.bilibili.R
 import com.example.bilibili.data.api.PostService
 import com.example.bilibili.databinding.ActivityUserProfileBinding
+import com.example.bilibili.ui.edit.EditActivity
 import com.example.bilibili.ui.personal.contribute.ContributeFragment
 import com.example.bilibili.ui.personal.home.HomeFragment
 import com.example.bilibili.ui.login.LoginActivity
@@ -60,8 +61,11 @@ class UserProfileActivity : AppCompatActivity() {
         // 初始化布局
         setupViewPagerAndTabs()
 
-        // 设置退出登录按钮
+        // 设置退出登录按钮（右上角）
         setupLogoutButton()
+
+        // 关注 / 编辑资料按钮
+        setupProfileActionButton()
 
         // 加载用户信息
         loadUserInfo()
@@ -71,10 +75,27 @@ class UserProfileActivity : AppCompatActivity() {
 
         // 返回按钮
         binding.ivBack.setOnClickListener { finish() }
+    }
 
-        // 关注按钮
-        binding.btnFocus.setOnClickListener {
-            viewModel.toggleFocus(targetUserId!!)
+    private fun isCurrentUser(): Boolean {
+        val currentUserId = SPUtils.getUserId()
+        return currentUserId.isNotEmpty() && targetUserId == currentUserId
+    }
+
+    private fun setupProfileActionButton() {
+        if (isCurrentUser()) {
+            binding.btnFocus.visibility = View.VISIBLE
+            binding.btnFocus.text = "编辑资料"
+            binding.btnFocus.setBackgroundResource(R.drawable.bg_pink_border)
+            binding.btnFocus.setTextColor(resources.getColor(R.color.bilibili_pink, null))
+            binding.btnFocus.setOnClickListener {
+                startActivity(Intent(this, EditActivity::class.java))
+            }
+        } else {
+            binding.btnFocus.visibility = View.VISIBLE
+            binding.btnFocus.setOnClickListener {
+                viewModel.toggleFocus(targetUserId!!)
+            }
         }
     }
 
@@ -173,8 +194,9 @@ class UserProfileActivity : AppCompatActivity() {
         }
 
         viewModel.focusState.observe(this) { isFocused ->
-            // 更新关注按钮状态
-            updateFocusButton(isFocused)
+            if (!isCurrentUser()) {
+                updateFocusButton(isFocused)
+            }
         }
     }
 
@@ -197,14 +219,17 @@ class UserProfileActivity : AppCompatActivity() {
         binding.tvFollowCount.text = userInfo.focusCount.toString()
         binding.tvLikeCount.text = userInfo.likeCount.toString()
 
-        // 设置关注状态
-        viewModel.setFocused(userInfo.haveFocus)
+        // 他人主页才更新关注状态
+        if (!isCurrentUser()) {
+            viewModel.setFocused(userInfo.haveFocus)
+        }
 
         // 显示内容，隐藏加载遮罩
         binding.loadingView.visibility = View.GONE
     }
 
     private fun updateFocusButton(isFocused: Boolean) {
+        if (isCurrentUser()) return
         if (isFocused) {
             binding.btnFocus.text = "已关注"
             binding.btnFocus.setBackgroundColor(resources.getColor(R.color.sl_divider_color))

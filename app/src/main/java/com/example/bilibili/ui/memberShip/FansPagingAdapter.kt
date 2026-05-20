@@ -12,7 +12,8 @@ import com.example.bilibili.databinding.ItemFriendBinding
 import com.example.bilibili.util.GlideEngine
 
 class FansPagingAdapter(
-    private val onActionClick: (UserFriend) -> Unit
+    private val onActionClick: (UserFriend) -> Unit,
+    private val onUserClick: (UserFriend) -> Unit
 ) : PagingDataAdapter<UserFriend, FansPagingAdapter.ViewHolder>(UserFriendDiffCallback()) {
 
     class ViewHolder(val binding: ItemFriendBinding) : RecyclerView.ViewHolder(binding.root)
@@ -34,6 +35,9 @@ class FansPagingAdapter(
             ""
         }
         GlideEngine.loadUserAvatar(binding.root.context, user.otherAvatar, binding.ivAvatar)
+
+        binding.root.setOnClickListener { onUserClick(user) }
+        binding.ivAvatar.setOnClickListener { onUserClick(user) }
 
         // 2. 根据 focusType 设置按钮文字和样式
         binding.btnFollowAction.apply {

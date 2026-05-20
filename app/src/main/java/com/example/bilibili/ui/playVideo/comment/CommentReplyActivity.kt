@@ -262,11 +262,7 @@ class CommentReplyActivity : AppCompatActivity() {
 
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
-
-        // 图片按钮（暂时不实现）
-        dialogBinding.ivImage.setOnClickListener {
-            ToastUtils.showShort(this, "图片功能暂未开放")
-        }
+        // 图片功能已移除
 
         // 发送按钮
         dialogBinding.tvSend.setOnClickListener {

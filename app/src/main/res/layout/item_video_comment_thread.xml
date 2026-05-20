@@ -13,6 +13,7 @@
         android:id="@+id/comment_content_area"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackgroundBorderless"
         android:orientation="horizontal">
 
         <!-- 头像 -->
@@ -82,6 +83,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:minWidth="180dp"
+                android:minHeight="120dp"
                 android:maxWidth="280dp"
                 android:maxHeight="280dp"
                 android:adjustViewBounds="true"

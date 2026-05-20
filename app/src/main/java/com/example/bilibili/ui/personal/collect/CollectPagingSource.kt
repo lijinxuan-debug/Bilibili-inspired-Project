@@ -12,10 +12,7 @@ class CollectPagingSource(private val userId: String) : PagingSource<Int, Collec
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CollectVideo> {
         return try {
-            // 获取页码，默认从第1页开始
             val page = params.key ?: 1
-
-            // 调用接口获取数据
             val response = service.loadUserCollection(userId, pageNo = page)
             val jsonObject = JSONObject(response)
 
@@ -26,21 +23,22 @@ class CollectPagingSource(private val userId: String) : PagingSource<Int, Collec
 
                 for (i in 0 until jsonArray.length()) {
                     val item = jsonArray.getJSONObject(i)
-                    list.add(CollectVideo(
-                        actionId = item.getInt("actionId"),
-                        videoId = item.getString("videoId"),
-                        videoUserId = item.getString("videoUserId"),
-                        commentId = item.getInt("commentId"),
-                        actionType = item.getInt("actionType"),
-                        actionCount = item.getInt("actionCount"),
-                        userId = item.getString("userId"),
-                        actionTime = item.getString("actionTime"),
-                        videoCover = item.getString("videoCover"),
-                        videoName = item.getString("videoName")
-                    ))
+                    list.add(
+                        CollectVideo(
+                            actionId = item.getInt("actionId"),
+                            videoId = item.getString("videoId"),
+                            videoUserId = item.getString("videoUserId"),
+                            commentId = item.getInt("commentId"),
+                            actionType = item.getInt("actionType"),
+                            actionCount = item.getInt("actionCount"),
+                            userId = item.getString("userId"),
+                            actionTime = item.getString("actionTime"),
+                            videoCover = item.getString("videoCover"),
+                            videoName = item.getString("videoName")
+                        )
+                    )
                 }
 
-                // 判断是否还有下一页
                 val hasMore = list.size >= params.loadSize
                 val nextPage = if (hasMore) page + 1 else null
 
@@ -58,7 +56,6 @@ class CollectPagingSource(private val userId: String) : PagingSource<Int, Collec
     }
 
     override fun getRefreshKey(state: PagingState<Int, CollectVideo>): Int? {
-        // 返回刷新时的页码
         return state.anchorPosition?.let { anchorPosition ->
             state.closestPageToPosition(anchorPosition)?.prevKey?.plus(1)
                 ?: state.closestPageToPosition(anchorPosition)?.nextKey?.minus(1)

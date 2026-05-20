@@ -11,7 +11,8 @@ import com.example.bilibili.util.GlideEngine
 
 class FansAdapter(
     private var list: List<UserFriend>,
-    private val onBtnClick: (UserFriend) -> Unit
+    private val onBtnClick: (UserFriend) -> Unit,
+    private val onUserClick: (UserFriend) -> Unit
 ) : RecyclerView.Adapter<FansAdapter.ViewHolder>() {
 
     class ViewHolder(val binding: ItemFriendBinding) : RecyclerView.ViewHolder(binding.root)
@@ -27,6 +28,8 @@ class FansAdapter(
 
         // 1. 加载头像和文本信息
         GlideEngine.loadUserAvatar(binding.root.context, user.otherAvatar, binding.ivAvatar)
+        binding.root.setOnClickListener { onUserClick(user) }
+        binding.ivAvatar.setOnClickListener { onUserClick(user) }
         binding.tvNickname.text = user.otherNickName
         binding.tvDescription.text = if (!user.otherPersonalIntroduction.isNullOrBlank() && user.otherPersonalIntroduction != "null") {
             user.otherPersonalIntroduction

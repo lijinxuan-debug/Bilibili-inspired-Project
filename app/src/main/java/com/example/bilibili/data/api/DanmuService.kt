@@ -21,7 +21,7 @@ interface DanmuService {
         @Field("mode") mode: Int,
         @Field("color") color: String,
         @Field("time") time: Int,
-        @Field("field") field: String,
+        @Field("fileId") fileId: String,
         @Field("videoId") videoId: String,
     ): String
 }

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -97,6 +98,7 @@ class SearchActivity : AppCompatActivity() {
 
         // 刷新历史记录
         renderHistoryChips()
+        setupDeleteHistoryButton()
 
         initView()
     }
@@ -165,12 +167,8 @@ class SearchActivity : AppCompatActivity() {
             return
         }
 
-        // 销毁按钮
-        binding.ivDeleteHistory.setOnClickListener {
-            SPUtils.clearSearchHistory()
-        }
-
         binding.llHistory.visibility = View.VISIBLE
+        binding.cgHistory.removeAllViews()
 
         for (word in historyList) {
             // 动态创建 Chip
@@ -194,6 +192,24 @@ class SearchActivity : AppCompatActivity() {
             }
             binding.cgHistory.addView(chip)
         }
+    }
+
+    private fun setupDeleteHistoryButton() {
+        binding.ivDeleteHistory.setOnClickListener {
+            showClearHistoryDialog()
+        }
+    }
+
+    private fun showClearHistoryDialog() {
+        MaterialAlertDialogBuilder(this, R.style.PinkMaterialDialogTheme)
+            .setMessage("确定要清除所有历史吗？")
+            .setPositiveButton("确定") { _, _ ->
+                SPUtils.clearSearchHistory()
+                binding.cgHistory.removeAllViews()
+                binding.llHistory.visibility = View.GONE
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun initView() {

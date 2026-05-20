@@ -132,6 +132,26 @@ object GlideEngine : ImageEngine {
     }
 
     /**
+     * 加载评论图片
+     * @param imagePath 图片路径
+     * @param imageView 目标ImageView
+     */
+    fun loadCommentImage(context: Context, imagePath: String, imageView: ImageView) {
+        if (!isContextValid(context)) return
+
+        // 拼接完整的图片URL
+        val fullUrl = "${RetrofitClient.BASE_URL}file/getImage?sourceName=$imagePath"
+
+        Glide.with(context)
+            .load(fullUrl)
+            .placeholder(R.drawable.ic_bili_placeholder)
+            .error(R.drawable.ic_bili_placeholder)
+            .fitCenter()
+            .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade())
+            .into(imageView)
+    }
+
+    /**
      * 加载预览图
      */
 

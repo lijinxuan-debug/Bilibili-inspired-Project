@@ -5,6 +5,9 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.DatePicker
 import android.widget.EditText
 import android.widget.Toast
@@ -261,32 +264,65 @@ class EditActivity : AppCompatActivity() {
     }
 
     private fun showNicknameDialog() {
-        val dialogBinding = DialogEditTextBinding.inflate(LayoutInflater.from(this))
-        dialogBinding.etInput.setText(tempNickname)
-        dialogBinding.etInput.hint = "请输入昵称"
-        dialogBinding.etInput.setSelection(dialogBinding.etInput.text.length)
-        dialogBinding.etInput.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
-        setEditTextSelectionHandlesColor(dialogBinding.etInput)
-
-        val dialog = BottomSheetDialog(this)
-        dialog.setContentView(dialogBinding.root)
-        dialog.show()
-
-        // 监听软键盘的确定按钮
-        dialogBinding.etInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                val newName = dialogBinding.etInput.text.toString().trim()
+        showEditTextBottomSheet(
+            currentText = tempNickname,
+            hint = "请输入昵称",
+            onConfirmed = { newName ->
                 if (newName.isNotEmpty() && newName != tempNickname) {
                     tempNickname = newName
                     binding.tvNickname.text = newName
                     hasUnsavedChanges = true
                 }
+            }
+        )
+    }
+
+    /**
+     * 弹出编辑 BottomSheet：自动聚焦、弹出软键盘、全选已有内容
+     */
+    private fun showEditTextBottomSheet(
+        currentText: String,
+        hint: String,
+        maxLines: Int = 1,
+        onConfirmed: (String) -> Unit
+    ) {
+        val dialogBinding = DialogEditTextBinding.inflate(LayoutInflater.from(this))
+        val editText = dialogBinding.etInput
+        editText.hint = hint
+        editText.maxLines = maxLines
+        editText.imeOptions = EditorInfo.IME_ACTION_DONE
+        setEditTextSelectionHandlesColor(editText)
+
+        editText.setText(currentText)
+        editText.selectAll()
+
+        val dialog = BottomSheetDialog(this)
+        dialog.setContentView(dialogBinding.root)
+        dialog.window?.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
+        )
+
+        dialog.setOnShowListener {
+            editText.requestFocus()
+            editText.postDelayed({
+                editText.selectAll()
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+            }, 100)
+        }
+
+        editText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                onConfirmed(editText.text.toString().trim())
                 dialog.dismiss()
                 true
             } else {
                 false
             }
         }
+
+        dialog.show()
     }
 
     private fun showGenderDialog() {
@@ -367,63 +403,32 @@ class EditActivity : AppCompatActivity() {
     }
 
     private fun showSignatureDialog() {
-        val dialogBinding = DialogEditTextBinding.inflate(LayoutInflater.from(this))
-        dialogBinding.etInput.setText(tempSignature)
-        dialogBinding.etInput.hint = "请输入个性签名"
-        dialogBinding.etInput.maxLines = 3
-        dialogBinding.etInput.setSelection(dialogBinding.etInput.text.length)
-        dialogBinding.etInput.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
-        dialogBinding.etInput.setRawInputType(android.text.InputType.TYPE_CLASS_TEXT)
-        setEditTextSelectionHandlesColor(dialogBinding.etInput)
-
-        val dialog = BottomSheetDialog(this)
-        dialog.setContentView(dialogBinding.root)
-        dialog.show()
-
-        // 监听软键盘的确定按钮
-        dialogBinding.etInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                val newSignature = dialogBinding.etInput.text.toString().trim()
+        showEditTextBottomSheet(
+            currentText = tempSignature,
+            hint = "请输入个性签名",
+            maxLines = 3,
+            onConfirmed = { newSignature ->
                 if (newSignature != tempSignature) {
                     tempSignature = newSignature
                     binding.tvSignature.text = newSignature.ifEmpty { "未设置" }
                     hasUnsavedChanges = true
                 }
-                dialog.dismiss()
-                true
-            } else {
-                false
             }
-        }
+        )
     }
 
     private fun showSchoolDialog() {
-        val dialogBinding = DialogEditTextBinding.inflate(LayoutInflater.from(this))
-        dialogBinding.etInput.setText(tempSchool)
-        dialogBinding.etInput.hint = "请输入学校名称"
-        dialogBinding.etInput.setSelection(dialogBinding.etInput.text.length)
-        dialogBinding.etInput.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
-        setEditTextSelectionHandlesColor(dialogBinding.etInput)
-
-        val dialog = BottomSheetDialog(this)
-        dialog.setContentView(dialogBinding.root)
-        dialog.show()
-
-        // 监听软键盘的确定按钮
-        dialogBinding.etInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                val newSchool = dialogBinding.etInput.text.toString().trim()
+        showEditTextBottomSheet(
+            currentText = tempSchool,
+            hint = "请输入学校名称",
+            onConfirmed = { newSchool ->
                 if (newSchool != tempSchool) {
                     tempSchool = newSchool
                     binding.tvSchool.text = newSchool.ifEmpty { "未设置" }
                     hasUnsavedChanges = true
                 }
-                dialog.dismiss()
-                true
-            } else {
-                false
             }
-        }
+        )
     }
 
     private fun copyUidToClipboard() {

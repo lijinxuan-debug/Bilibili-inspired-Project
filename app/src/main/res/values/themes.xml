@@ -85,6 +85,26 @@
 
     <style name="PinkDialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
         <item name="colorAccent">#FB7299</item>
+        <item name="android:textColorPrimary">#333333</item>
+        <item name="buttonBarPositiveButtonStyle">@style/PinkDialogButtonStyle</item>
+        <item name="buttonBarNegativeButtonStyle">@style/PinkDialogButtonStyle</item>
+    </style>
+
+    <style name="PinkDialogButtonStyle" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <item name="android:textColor">#FB7299</item>
+    </style>
+
+    <!-- Material 主题 Activity（如 SearchActivity）需用此样式，否则按钮可能不可见 -->
+    <style name="PinkMaterialDialogTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="colorPrimary">#FB7299</item>
+        <item name="colorAccent">#FB7299</item>
+        <item name="android:textColorPrimary">#333333</item>
+        <item name="buttonBarPositiveButtonStyle">@style/PinkMaterialDialogButtonStyle</item>
+        <item name="buttonBarNegativeButtonStyle">@style/PinkMaterialDialogButtonStyle</item>
+    </style>
+
+    <style name="PinkMaterialDialogButtonStyle" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">#FB7299</item>
     </style>
 
     <style name="SearchHistoryChipStyle" parent="Widget.MaterialComponents.Chip.Action">

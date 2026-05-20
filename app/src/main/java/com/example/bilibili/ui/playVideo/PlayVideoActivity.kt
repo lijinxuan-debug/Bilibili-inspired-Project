@@ -1,12 +1,19 @@
 package com.example.bilibili.ui.playVideo
 
-import android.app.PictureInPictureParams
+import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
 import androidx.activity.enableEdgeToEdge
@@ -17,9 +24,14 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.request.transition.Transition
 import com.example.bilibili.MainActivity
 import com.example.bilibili.R
 import com.example.bilibili.data.model.DanmuEntity
+import com.example.bilibili.data.model.PreviewConfigEntity
 import com.example.bilibili.databinding.ActivityPlayVideoBinding
 import com.example.bilibili.databinding.DialogDanmuSettingBinding
 import com.example.bilibili.ui.playVideo.comment.VideoCommentFragment
@@ -30,6 +42,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.shuyu.gsyvideoplayer.GSYVideoManager.releaseAllVideos
+import com.shuyu.gsyvideoplayer.utils.CommonUtil
 import com.shuyu.gsyvideoplayer.utils.OrientationUtils
 import com.shuyu.gsyvideoplayer.video.base.GSYVideoView
 
@@ -49,9 +62,41 @@ class PlayVideoActivity : AppCompatActivity() {
 
     private var currentVideoTitle: String? = null
 
+    // 当前雪碧图的相关配置
+    private var currentPreviewConfig: PreviewConfigEntity? = null
+
+    // 雪碧图大图（只加载一次，拖动进度条时只改 Matrix）
+    private var previewSpriteBitmap: Bitmap? = null
+
+    private var wasPlayingBeforeBackground = false
+
+    private var lastPlayPositionMs = 0L
+
+    /** 从后台返回时需要恢复进度（在 onStop 里置 true） */
+    private var shouldRestorePlayback = false
+
+    /** 等弹幕接口返回后再开播，避免视频先跑、弹幕后 seek 造成回跳 */
+    private var danmakuListReady = false
+
+    private var pendingPlayUrl: String? = null
+
+    private var pendingPlaySeekMs = 0L
+
+    private var cachedDanmakuList: List<DanmuEntity>? = null
+
+    private var danmakuUiEnabled = true
+
+    private var danmuExpandAnimator: ValueAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        savedInstanceState?.let {
+            lastPlayPositionMs = it.getLong(KEY_PLAY_POSITION, 0L)
+            wasPlayingBeforeBackground = it.getBoolean(KEY_WAS_PLAYING, false)
+            if (lastPlayPositionMs > 0) {
+                shouldRestorePlayback = true
+            }
+        }
         // 1. 基础 UI 配置
         enableEdgeToEdge()
         binding = ActivityPlayVideoBinding.inflate(layoutInflater)
@@ -92,10 +137,7 @@ class PlayVideoActivity : AppCompatActivity() {
         // 返回按钮逻辑
         binding.ivStickyBack.setOnClickListener { finish() }
 
-        // 发送弹幕
-        binding.danmu.setOnClickListener {
-            danmuSheetDialog()
-        }
+        initDanmuSwitch()
 
         // 初始化方向工具类
         orientationUtils = OrientationUtils(this, binding.videoPlayer)
@@ -108,6 +150,124 @@ class PlayVideoActivity : AppCompatActivity() {
             orientationUtils.resolveByClick()
             // 开启全屏窗口
             binding.videoPlayer.startWindowFullscreen(this, true, true)
+        }
+
+        setupPreviewSeekListener()
+    }
+
+    /** 不要覆盖 GSY 的 SeekBar 监听器；通过播放器回调统一处理预览 */
+    private fun setupPreviewSeekListener() {
+        binding.videoPlayer.setOnPreviewSeekListener(object : DanmakuVideoPlayer.OnPreviewSeekListener {
+            override fun onSeekStart() {
+                if (currentPreviewConfig != null) {
+                    getPreviewLayout()?.visibility = View.VISIBLE
+                }
+            }
+
+            override fun onSeekPreview(seekTimeMs: Long, totalTimeMs: Long) {
+                updatePreviewAtTime(seekTimeMs, totalTimeMs)
+            }
+
+            override fun onSeekEnd() {
+                getPreviewLayout()?.visibility = View.GONE
+            }
+        })
+    }
+
+    private fun getPreviewLayout() =
+        binding.videoPlayer.findViewById<androidx.cardview.widget.CardView>(R.id.layout_preview_layout)
+
+    private fun getPreviewImage() =
+        binding.videoPlayer.findViewById<ImageView>(R.id.iv_preview_image)
+
+    private fun getPreviewTimeText() =
+        binding.videoPlayer.findViewById<android.widget.TextView>(R.id.tv_preview_time)
+
+    private fun initDanmuSwitch() {
+        binding.ivDanmuSwitch.isSelected = danmakuUiEnabled
+        binding.videoPlayer.setDanmaKuShow(danmakuUiEnabled)
+        updateDanmuInputExpanded(danmakuUiEnabled, animate = false)
+
+        binding.ivDanmuSwitch.setOnClickListener {
+            danmakuUiEnabled = !danmakuUiEnabled
+            binding.ivDanmuSwitch.isSelected = danmakuUiEnabled
+            binding.videoPlayer.setDanmaKuShow(danmakuUiEnabled)
+            updateDanmuInputExpanded(danmakuUiEnabled, animate = true)
+        }
+
+        binding.danmu.setOnClickListener {
+            if (danmakuUiEnabled) {
+                danmuSheetDialog()
+            }
+        }
+    }
+
+    /** 裁剪容器宽度收缩/展开，内部文案不被挤压换行 */
+    private fun updateDanmuInputExpanded(expanded: Boolean, animate: Boolean) {
+        val clipHost = binding.flDanmuExpandClip
+        val content = binding.llDanmuExpandable
+        danmuExpandAnimator?.cancel()
+
+        if (!animate) {
+            if (expanded) {
+                clipHost.visibility = View.VISIBLE
+                clipHost.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                content.scaleX = 1f
+            } else {
+                clipHost.visibility = View.GONE
+                content.scaleX = 1f
+            }
+            clipHost.requestLayout()
+            return
+        }
+
+        val widthSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        content.measure(widthSpec, heightSpec)
+        val targetWidth = content.measuredWidth
+
+        if (expanded) {
+            clipHost.visibility = View.VISIBLE
+            content.scaleX = 1f
+            clipHost.layoutParams = clipHost.layoutParams.apply { width = 0 }
+            clipHost.requestLayout()
+
+            danmuExpandAnimator = ValueAnimator.ofInt(0, targetWidth).apply {
+                duration = DANMU_EXPAND_ANIM_MS
+                interpolator = AccelerateDecelerateInterpolator()
+                addUpdateListener { animation ->
+                    clipHost.layoutParams.width = animation.animatedValue as Int
+                    clipHost.requestLayout()
+                }
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        clipHost.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                    }
+                })
+                start()
+            }
+        } else {
+            val startWidth = if (clipHost.width > 0) clipHost.width else targetWidth
+            if (startWidth <= 0) {
+                clipHost.visibility = View.GONE
+                return
+            }
+            danmuExpandAnimator = ValueAnimator.ofInt(startWidth, 0).apply {
+                duration = DANMU_EXPAND_ANIM_MS
+                interpolator = AccelerateDecelerateInterpolator()
+                addUpdateListener { animation ->
+                    clipHost.layoutParams.width = animation.animatedValue as Int
+                    clipHost.requestLayout()
+                }
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        clipHost.visibility = View.GONE
+                        clipHost.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                        content.scaleX = 1f
+                    }
+                })
+                start()
+            }
         }
     }
 
@@ -192,11 +352,20 @@ class PlayVideoActivity : AppCompatActivity() {
     private fun initObservers() {
         // 观察播放地址：一旦拿到 M3U8 地址，立刻初始化 GSYPlayer
         viewModel.videoUrlLive.observe(this) { url ->
-            if (!url.isNullOrEmpty()) {
-                currentVideoUrl = url
-                currentVideoTitle = "视频播放"
-                initPlayer(url, "视频播放")
+            if (url.isNullOrEmpty()) return@observe
+            val sameUrl = url == currentVideoUrl
+            currentVideoUrl = url
+            currentVideoTitle = "视频播放"
+            // 从后台回来 LiveData 会再回调一次，不能再次 initPlayer 否则从头播
+            if (sameUrl && binding.videoPlayer.currentPlayer != null) {
+                restorePlaybackIfNeeded()
+                return@observe
             }
+            danmakuListReady = false
+            pendingPlayUrl = url
+            pendingPlaySeekMs = if (shouldRestorePlayback) lastPlayPositionMs else 0L
+            shouldRestorePlayback = false
+            tryStartPlayerWhenReady()
         }
 
         // 观察视频详情
@@ -214,52 +383,65 @@ class PlayVideoActivity : AppCompatActivity() {
             ToastUtils.showShort(this, errorMsg)
         }
 
-        // 观察弹幕数据
+        // 观察弹幕数据：先缓存，与播放地址都就绪后再灌入播放器并开播
         viewModel.danmuListLive.observe(this) { danmuEntities ->
-            // 否则新视频一开播，旧视频的弹幕还在引擎里飘，时钟直接对撞卡死！
-            binding.videoPlayer.danmakuView?.removeAllDanmakus(true)
+            cachedDanmakuList = danmuEntities
+            danmakuListReady = true
+            tryStartPlayerWhenReady()
+        }
 
-            // 发送所有加载的弹幕
-            danmuEntities.forEach { entity ->
-                binding.videoPlayer.addDanmakuEntity(entity)
+        // 观察雪碧图数据
+        viewModel.previewConfigLive.observe(this) { config ->
+            if (config != null && config.url.isNotEmpty()) {
+                this.currentPreviewConfig = config
+                loadPreviewSprite(config.url)
             }
         }
     }
 
-    // 当用户主动按 Home 键或划出 App 返回桌面时触发
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
+    /** 雪碧图只下载一次；CustomTarget 必须配合 asBitmap() 并指定宽高 */
+    private fun loadPreviewSprite(url: String) {
+        Glide.with(this)
+            .asBitmap()
+            .load(url)
+            .into(object : CustomTarget<Bitmap>(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL) {
+                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                    previewSpriteBitmap = resource
+                }
 
-        // 如果视频正在播放，且系统版本支持（Android 8.0+），就直接切入画中画小窗
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val isPlaying = binding.videoPlayer.currentPlayer.currentState == GSYVideoView.CURRENT_STATE_PLAYING
-            if (isPlaying) {
-                val params = PictureInPictureParams.Builder().build()
-                enterPictureInPictureMode(params)
-            }
-        }
+                override fun onLoadCleared(placeholder: Drawable?) {
+                    previewSpriteBitmap = null
+                }
+            })
     }
 
-    // 当画中画小窗状态发生改变时回调
-    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+    private fun updatePreviewAtTime(currentTimeMs: Long, totalTimeMs: Long) {
+        val config = currentPreviewConfig ?: return
+        val previewImage = getPreviewImage() ?: return
+        val previewTimeText = getPreviewTimeText()
 
-        if (isInPictureInPictureMode) {
-            // 1. 已经进入桌面小窗：隐藏顶部和底部控制栏
-            binding.videoPlayer.findViewById<View>(R.id.layout_top)?.visibility = View.GONE
-            binding.videoPlayer.findViewById<View>(R.id.layout_bottom)?.visibility = View.GONE
-            binding.videoPlayer.findViewById<View>(R.id.bottom_progressbar)?.visibility = View.GONE
+        previewTimeText?.text =
+            "${CommonUtil.stringForTime(currentTimeMs)} / ${CommonUtil.stringForTime(totalTimeMs)}"
 
-            // 2. 如果你有弹幕，小窗里也必须关掉，否则密密麻麻卡死
-            binding.videoPlayer.danmakuView?.hide()
-        } else {
-            // 3. 用户从小窗点击恢复，回到了主 App：把控制栏和弹幕重新变回来
-            binding.videoPlayer.findViewById<View>(R.id.layout_top)?.visibility = View.VISIBLE
-            binding.videoPlayer.findViewById<View>(R.id.layout_bottom)?.visibility = View.VISIBLE
-            binding.videoPlayer.findViewById<View>(R.id.bottom_progressbar)?.visibility = View.VISIBLE
+        if (config.interval <= 0) return
+        var frameIndex = (currentTimeMs / 1000.0 / config.interval).toInt()
+        if (frameIndex < 0) frameIndex = 0
+        if (frameIndex >= config.total) frameIndex = config.total - 1
 
-            binding.videoPlayer.danmakuView?.show()
-        }
+        val frameBitmap = cropPreviewFrame(config, frameIndex) ?: return
+        previewImage.scaleType = ImageView.ScaleType.CENTER_CROP
+        previewImage.setImageBitmap(frameBitmap)
+    }
+
+    /** 从雪碧图大图裁切单帧，避免 Matrix 只平移导致露出 3x3 九宫格 */
+    private fun cropPreviewFrame(config: PreviewConfigEntity, frameIndex: Int): Bitmap? {
+        val source = previewSpriteBitmap ?: return null
+        val col = frameIndex % config.col
+        val row = frameIndex / config.col
+        val x = col * config.frameW
+        val y = row * config.frameH
+        if (x + config.frameW > source.width || y + config.frameH > source.height) return null
+        return Bitmap.createBitmap(source, x, y, config.frameW, config.frameH)
     }
 
     /**
@@ -326,81 +508,135 @@ class PlayVideoActivity : AppCompatActivity() {
         })
     }
 
+    @SuppressLint("HardwareIds")
+    private fun getAndroidId(): String {
+        return Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+    }
+
+    /** 弹幕先 prepare，再开播，与 GSY 官方一致，避免视频先跑、弹幕后 seek 弹回 */
+    private fun tryStartPlayerWhenReady() {
+        val url = pendingPlayUrl ?: return
+        if (!danmakuListReady) return
+        val list = cachedDanmakuList ?: return
+        val title = currentVideoTitle ?: "视频播放"
+        val seekMs = pendingPlaySeekMs
+        pendingPlayUrl = null
+        pendingPlaySeekMs = 0L
+        binding.videoPlayer.resetDanmakuForNewVideo()
+        binding.videoPlayer.setDanmakuList(list)
+        if (::currentFileId.isInitialized && currentFileId.isNotEmpty()) {
+            viewModel.reportVideoPlayOnline(currentFileId, getAndroidId())
+        }
+        initPlayer(url, title, seekMs)
+    }
+
     /**
      * 初始化 GSYVideoPlayer
      */
-    private fun initPlayer(url: String, title: String) {
+    private fun initPlayer(url: String, title: String, seekMs: Long = 0L) {
         binding.videoPlayer.onVideoReset()
 
         binding.videoPlayer.setUp(url, true, null)
         binding.videoPlayer.setIsTouchWiget(true)
-
-        // 隐藏自带的返回键
+        binding.videoPlayer.setReleaseWhenLossAudio(false)
         binding.videoPlayer.backButton.visibility = View.GONE
 
+        if (seekMs > 0) {
+            binding.videoPlayer.setDanmakuStartSeekPosition(seekMs)
+        }
         binding.videoPlayer.post {
             binding.videoPlayer.startPlayLogic()
+            if (seekMs > 0) {
+                binding.videoPlayer.postDelayed({
+                    binding.videoPlayer.seekTo(seekMs)
+                }, 300)
+            }
         }
+    }
+
+    private fun snapshotPlaybackState() {
+        try {
+            val pos = binding.videoPlayer.currentPositionWhenPlaying
+            if (pos > 0) {
+                lastPlayPositionMs = pos
+            }
+            val state = binding.videoPlayer.currentPlayer?.currentState
+            wasPlayingBeforeBackground = state == GSYVideoView.CURRENT_STATE_PLAYING
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun restorePlaybackIfNeeded() {
+        if (!shouldRestorePlayback) return
+        shouldRestorePlayback = false
+        try {
+            val player = binding.videoPlayer
+            if (player.currentPlayer == null) return
+            player.onVideoResume()
+            // 等 surface 恢复后再读当前进度；后台音频若一直在播，livePos 会大于 onStop 时保存的值
+            player.post {
+                val livePos = player.currentPositionWhenPlaying
+                val targetPos = maxOf(lastPlayPositionMs, livePos)
+                lastPlayPositionMs = targetPos
+                // 仅当内核进度明显落后（被重置）时才 seek，避免把 35 秒拽回 31 秒
+                if (livePos + 800 < targetPos) {
+                    player.seekTo(targetPos)
+                }
+                player.syncDanmakuOnce(targetPos)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        snapshotPlaybackState()
+        outState.putLong(KEY_PLAY_POSITION, lastPlayPositionMs)
+        outState.putBoolean(KEY_WAS_PLAYING, wasPlayingBeforeBackground)
     }
 
     override fun onPause() {
         super.onPause()
-        // 进入了桌面画中画模式，视频不暂停继续播放
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
-            return
+        // 不调用 onVideoPause()，切后台时让音频继续；顺便记一下进度（onStop 时还会再记一次）
+        if (!isFinishing) {
+            snapshotPlaybackState()
         }
+    }
 
-        if (binding.videoPlayer.currentPlayer != null) {
-            binding.videoPlayer.onVideoPause()
-        }
+    override fun onStop() {
+        super.onStop()
+        if (isFinishing) return
+        snapshotPlaybackState()
+        shouldRestorePlayback = true
+        // 不切后台暂停弹幕：视频音频继续播时弹幕时钟也应继续，回前台再 seek 对齐即可
     }
 
     override fun onResume() {
         super.onResume()
-        // 从小窗回到了大窗
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
-            if (binding.videoPlayer.currentPlayer != null) {
-                binding.videoPlayer.onVideoResume()
-            }
-            return
-        }
+        restorePlaybackIfNeeded()
+    }
 
-        try {
-            // 检查播放器是否可用
-            if (binding.videoPlayer.currentPlayer != null) {
-                // 播放器正常，恢复播放
-                binding.videoPlayer.onVideoResume()
-            } else {
-                // 播放器已被释放或未初始化，重新初始化
-                if (!currentVideoUrl.isNullOrEmpty()) {
-                    currentVideoUrl?.let { url ->
-                        currentVideoTitle?.let { title ->
-                            initPlayer(url, title)
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            // 发生异常时尝试重新初始化
-            if (!currentVideoUrl.isNullOrEmpty()) {
-                currentVideoUrl?.let { url ->
-                    currentVideoTitle?.let { title ->
-                        initPlayer(url, title)
-                    }
-                }
-            }
-        }
+    companion object {
+        private const val KEY_PLAY_POSITION = "play_position"
+        private const val KEY_WAS_PLAYING = "was_playing"
+        private const val DANMU_EXPAND_ANIM_MS = 220L
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        danmuExpandAnimator?.cancel()
+
         // 彻底释放屏幕旋转工具类，防止严重的内存泄漏和传感器死锁
         if (::orientationUtils.isInitialized) {
             orientationUtils.releaseListener()
         }
 
-        // 只释放当前播放器，不影响其他Activity的播放器
+        previewSpriteBitmap = null
+
         try {
+            binding.videoPlayer.currentPlayer?.release()
             binding.videoPlayer.release()
         } catch (e: Exception) {
             // 忽略释放异常

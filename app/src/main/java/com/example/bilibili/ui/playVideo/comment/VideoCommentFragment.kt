@@ -2,9 +2,7 @@ package com.example.bilibili.ui.playVideo.comment
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -26,19 +24,11 @@ import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.ToastUtils
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.luck.picture.lib.basic.PictureSelector
-import com.luck.picture.lib.config.SelectMimeType
-import com.luck.picture.lib.entity.LocalMedia
-import com.luck.picture.lib.interfaces.OnResultCallbackListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.File
 
 class VideoCommentFragment : Fragment() {
     private var _binding: FragmentVideoCommentBinding? = null
@@ -57,15 +47,6 @@ class VideoCommentFragment : Fragment() {
     // 底部对话框
     private var commentBottomSheetDialog: BottomSheetDialog? = null
 
-    // 选中的图片路径
-    private var selectedImagePath: String? = null
-
-    // 选中的图片URI
-    private var selectedImageUri: Uri? = null
-
-    // 上传的图片路径（服务器返回的路径）
-    private var uploadedImagePath: String? = null
-
     private val fileService = RetrofitClient.create(FileService::class.java)
 
     override fun onCreateView(
@@ -83,6 +64,8 @@ class VideoCommentFragment : Fragment() {
         initRecyclerView()
         observeViewModel()
         setupBottomBar()
+        setupEmptyState()
+        setupSortButton()
 
         // 从 Activity 获取 videoId
         viewModel.videoDetailLive.observe(viewLifecycleOwner) { videoInfo ->
@@ -94,7 +77,6 @@ class VideoCommentFragment : Fragment() {
         binding.rvComments.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = commentAdapter
-            setHasFixedSize(true)
         }
 
         // 使用函数式编程设置回调
@@ -155,27 +137,17 @@ class VideoCommentFragment : Fragment() {
             commentItem.isHated = false
         }
 
-        // 更新 UI
-        val position = commentAdapter.differ.currentList.indexOf(commentItem)
-        if (position >= 0) {
-            commentAdapter.notifyItemChanged(position)
-        }
+        notifyCommentItemChanged(commentItem)
 
-        // 调用 ViewModel 执行网络请求
         viewModel.doCommentAction(
             videoId = videoId,
             commentId = commentItem.commentId,
             actionType = 0 // 0-点赞
-        ) { _, success ->
+        ) { success ->
             if (!success) {
-                // 失败回滚 UI
                 commentItem.isLiked = oldIsLiked
-                val rollbackPosition = commentAdapter.differ.currentList.indexOf(commentItem)
-                if (rollbackPosition >= 0) {
-                    commentAdapter.notifyItemChanged(rollbackPosition)
-                }
+                notifyCommentItemChanged(commentItem)
             }
-            // 成功后，评论列表会自动刷新（ViewModel 中的 fetchComments）
         }
     }
 
@@ -198,27 +170,17 @@ class VideoCommentFragment : Fragment() {
             commentItem.isLiked = false
         }
 
-        // 更新 UI
-        val position = commentAdapter.differ.currentList.indexOf(commentItem)
-        if (position >= 0) {
-            commentAdapter.notifyItemChanged(position)
-        }
+        notifyCommentItemChanged(commentItem)
 
-        // 调用 ViewModel 执行网络请求
         viewModel.doCommentAction(
             videoId = videoId,
             commentId = commentItem.commentId,
             actionType = 1 // 1-踩
-        ) { _, success ->
+        ) { success ->
             if (!success) {
-                // 失败回滚 UI
                 commentItem.isHated = oldIsHated
-                val rollbackPosition = commentAdapter.differ.currentList.indexOf(commentItem)
-                if (rollbackPosition >= 0) {
-                    commentAdapter.notifyItemChanged(rollbackPosition)
-                }
+                notifyCommentItemChanged(commentItem)
             }
-            // 成功后，评论列表会自动刷新（ViewModel 中的 fetchComments）
         }
     }
 
@@ -227,6 +189,51 @@ class VideoCommentFragment : Fragment() {
         binding.tvFakeInput.setOnClickListener {
             openCommentDialog(null)
         }
+    }
+
+    private fun setupEmptyState() {
+        binding.tvCommentNow.setOnClickListener {
+            openCommentDialog(null)
+        }
+    }
+
+    private fun setupSortButton() {
+        viewModel.commentOrderTypeLive.observe(viewLifecycleOwner) { orderType ->
+            binding.tvSortLabel.text = if (orderType == 0) "按热度" else "按时间"
+        }
+        binding.btnSort.setOnClickListener {
+            val videoId = currentVideoId
+            if (videoId.isNullOrEmpty()) {
+                ToastUtils.showShort(requireContext(), "视频信息加载中，请稍后")
+                return@setOnClickListener
+            }
+            viewModel.toggleCommentOrderType(videoId)
+        }
+    }
+
+    private fun notifyCommentItemChanged(commentItem: CommentItem) {
+        val position = commentAdapter.differ.currentList.indexOf(commentItem)
+        if (position >= 0) {
+            commentAdapter.notifyItemChanged(position)
+        }
+    }
+
+    private fun scrollCommentsToTop() {
+        binding.rvComments.post {
+            (binding.rvComments.layoutManager as? LinearLayoutManager)
+                ?.scrollToPositionWithOffset(0, 0)
+        }
+    }
+
+    private fun updateEmptyState(totalCount: Int?) {
+        if (totalCount == null) {
+            binding.layoutEmptyComment.visibility = View.GONE
+            binding.rvComments.visibility = View.VISIBLE
+            return
+        }
+        val isEmpty = totalCount == 0
+        binding.layoutEmptyComment.visibility = if (isEmpty) View.VISIBLE else View.GONE
+        binding.rvComments.visibility = if (isEmpty) View.GONE else View.VISIBLE
     }
 
     /**
@@ -273,32 +280,18 @@ class VideoCommentFragment : Fragment() {
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                     val length = s?.length ?: 0
                     // 根据输入内容或选中图片动态调整发送按钮状态
-                    dialogBinding.tvSend.isEnabled = length > 0 || selectedImageUri != null
-                    dialogBinding.tvSend.alpha = if (length > 0 || selectedImageUri != null) 1f else 0.5f
+                    dialogBinding.tvSend.isEnabled = length > 0
+                    dialogBinding.tvSend.alpha = if (length > 0) 1f else 0.5f
                 }
 
                 override fun afterTextChanged(s: android.text.Editable?) {}
             })
 
-            // 图片按钮（选择图片）
-            dialogBinding.ivImage.setOnClickListener {
-                selectImage(dialogBinding)
-            }
-
-            // 移除图片按钮
-            dialogBinding.ivRemoveImage.setOnClickListener {
-                selectedImagePath = null
-                selectedImageUri = null
-                uploadedImagePath = null
-                dialogBinding.selectedImageContainer.visibility = View.GONE
-                dialogBinding.ivSelectedImage.setImageURI(null)
-            }
-
             // 发送按钮
             dialogBinding.tvSend.setOnClickListener {
                 val content = dialogBinding.etCommentInput.text.toString().trim()
-                if (content.isEmpty() && uploadedImagePath == null) {
-                    ToastUtils.showShort(requireContext(), "请输入评论内容或选择图片")
+                if (content.isEmpty()) {
+                    ToastUtils.showShort(requireContext(), "请输入评论内容")
                     return@setOnClickListener
                 }
 
@@ -308,42 +301,13 @@ class VideoCommentFragment : Fragment() {
                     return@setOnClickListener
                 }
 
-                // 如果有选中的图片，先上传
-                if (selectedImageUri != null && uploadedImagePath == null) {
-                    // 显示加载提示
-                    dialogBinding.tvSend.isEnabled = false
-                    dialogBinding.tvSend.text = "上传中..."
+                // 直接发送评论（不包含图片）
+                viewModel.postComment(videoId, content, replyCommentId, null)
 
-                    // 上传图片
-                    lifecycleScope.launch {
-                        val success = uploadImage(selectedImageUri!!) { path ->
-                            uploadedImagePath = path
-                        }
-
-                        if (success && uploadedImagePath != null) {
-                            // 上传成功，发送评论
-                            viewModel.postComment(videoId, content, replyCommentId, uploadedImagePath)
-
-                            // 隐藏键盘和对话框
-                            val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                            imm.hideSoftInputFromWindow(dialogBinding.etCommentInput.windowToken, 0)
-                            dismiss()
-                        } else {
-                            // 上传失败
-                            dialogBinding.tvSend.isEnabled = true
-                            dialogBinding.tvSend.text = "发布"
-                            ToastUtils.showShort(requireContext(), "图片上传失败")
-                        }
-                    }
-                } else {
-                    // 没有图片或已经上传过，直接发送评论
-                    viewModel.postComment(videoId, content, replyCommentId, uploadedImagePath)
-
-                    // 隐藏键盘和对话框
-                    val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.hideSoftInputFromWindow(dialogBinding.etCommentInput.windowToken, 0)
-                    dismiss()
-                }
+                // 隐藏键盘和对话框
+                val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(dialogBinding.etCommentInput.windowToken, 0)
+                dismiss()
             }
 
             show()
@@ -358,9 +322,15 @@ class VideoCommentFragment : Fragment() {
     }
 
     private fun observeViewModel() {
+        viewModel.commentTotalCount.observe(viewLifecycleOwner) { count ->
+            updateEmptyState(count)
+        }
+
         // 观察评论列表数据变化
         viewModel.commentListLive.observe(viewLifecycleOwner) { list ->
-            commentAdapter.setData(list)
+            commentAdapter.setData(list) {
+                scrollCommentsToTop()
+            }
         }
 
         // 观察评论发布结果
@@ -385,79 +355,16 @@ class VideoCommentFragment : Fragment() {
      * 选择图片
      */
     private fun selectImage(dialogBinding: DialogCommentInputBinding) {
-        PictureSelector.create(requireContext())
-            .openGallery(SelectMimeType.ofImage())
-            .setImageEngine(GlideEngine.createGlideImageEngine())
-            .setMaxSelectNum(1) // 只能选择一张图片
-            .setMinSelectNum(1)
-            .setImageSpanCount(4)
-            .setSelectedData(emptyList<LocalMedia>())
-            .forResult(object : OnResultCallbackListener<LocalMedia> {
-                override fun onResult(result: ArrayList<LocalMedia>) {
-                    // 获取选中的图片
-                    if (result.isNotEmpty()) {
-                        val media = result[0]
-                        selectedImageUri = media.path?.let { Uri.fromFile(File(it)) }
-
-                        // 显示选中的图片
-                        selectedImageUri?.let { uri ->
-                            dialogBinding.selectedImageContainer.visibility = View.VISIBLE
-                            dialogBinding.ivSelectedImage.setImageURI(uri)
-
-                            // 启用发送按钮
-                            val content = dialogBinding.etCommentInput.text.toString()
-                            dialogBinding.tvSend.isEnabled = content.isNotEmpty()
-                            dialogBinding.tvSend.alpha = if (content.isNotEmpty()) 1f else 0.5f
-                        }
-                    }
-                }
-
-                override fun onCancel() {
-                    // 用户取消选择
-                }
-            })
+        // 图片选择功能已移除
     }
 
     /**
      * 上传图片到服务器
      */
-    private suspend fun uploadImage(uri: Uri, onPathReceived: (String?) -> Unit): Boolean {
-        return withContext(Dispatchers.IO) {
-            try {
-                // 将 URI 转换为 File
-                val inputStream = requireContext().contentResolver.openInputStream(uri)
-                val tempFile = File(requireContext().cacheDir, "upload_${System.currentTimeMillis()}.jpg")
-                tempFile.outputStream().use { output ->
-                    inputStream?.copyTo(output)
-                }
-
-                // 创建请求体
-                val requestBody = tempFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                val filePart = MultipartBody.Part.createFormData("file", tempFile.name, requestBody)
-
-                // createThumbnail 参数
-                val createThumbnailBody = "false".toRequestBody("text/plain".toMediaTypeOrNull())
-
-                // 上传图片
-                val result = fileService.postImage(filePart, createThumbnailBody)
-                val jsonObject = JSONObject(result)
-
-                if (jsonObject.optInt("code") == 200) {
-                    val imagePath = jsonObject.optString("data")
-                    onPathReceived(imagePath)
-                    true
-                } else {
-                    val errorMsg = jsonObject.optString("message", "上传失败")
-                    Log.e("VideoCommentFragment", "图片上传失败: $errorMsg")
-                    onPathReceived(null)
-                    false
-                }
-            } catch (e: Exception) {
-                Log.e("VideoCommentFragment", "图片上传异常", e)
-                onPathReceived(null)
-                false
-            }
-        }
+    private suspend fun uploadImage(onPathReceived: (String?) -> Unit): Boolean {
+        // 图片上传功能已移除
+        onPathReceived(null)
+        return false
     }
 
     companion object {

@@ -3,14 +3,26 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center"
+    android:minHeight="48dp"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:paddingVertical="16dp"
+    android:paddingHorizontal="12dp">
 
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:indeterminateTint="#FB7299" />
+
+    <TextView
+        android:id="@+id/tvLoadingHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="正在加载更多..."
+        android:textColor="#999999"
+        android:textSize="12sp"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/tvError"

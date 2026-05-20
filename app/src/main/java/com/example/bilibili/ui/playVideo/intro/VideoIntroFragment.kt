@@ -77,6 +77,13 @@ class VideoIntroFragment : Fragment() {
             updateFollowUI(followed)
         }
 
+        // 5. fileId 就绪后开始上报（接口参数是 fileId，不是 videoId）
+        sharedViewModel.fileIdLive.observe(viewLifecycleOwner) { fileId ->
+            if (!fileId.isNullOrEmpty()) {
+                startOnlinePolling(fileId)
+            }
+        }
+
     }
 
     /**
@@ -93,12 +100,12 @@ class VideoIntroFragment : Fragment() {
     /**
      * 开始在线观看人数轮询
      */
-    private fun startOnlinePolling(videoId: String) {
+    private fun startOnlinePolling(fileId: String) {
         stopOnlinePolling() // 先停止之前的轮询
 
         onlineRunnable = object : Runnable {
             override fun run() {
-                fetchOnlineCount(videoId)
+                fetchOnlineCount(fileId)
                 onlineHandler.postDelayed(this, onlinePollingInterval)
             }
         }
@@ -118,13 +125,13 @@ class VideoIntroFragment : Fragment() {
     /**
      * 获取在线观看人数
      */
-    private fun fetchOnlineCount(videoId: String) {
+    private fun fetchOnlineCount(fileId: String) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val deviceId = getDeviceId()
                 val videoService = RetrofitClient.create(VideoService::class.java)
                 val response = withContext(Dispatchers.IO) {
-                    videoService.reportVideoPlayOnline(videoId, deviceId)
+                    videoService.reportVideoPlayOnline(fileId, deviceId)
                 }
 
                 val jsonObject = JSONObject(response)
@@ -153,9 +160,6 @@ class VideoIntroFragment : Fragment() {
             // 加载推荐视频
             val videoName = info.optString("videoName")
             loadRecommendVideos(videoName, videoId)
-
-            // 启动在线观看人数轮询
-            startOnlinePolling(videoId)
 
             cgTags.removeAllViews() // 刷新前先清空旧标签，防止页面滑动导致数据错乱叠加
             val tagsString = info.optString("tags")
@@ -204,19 +208,14 @@ class VideoIntroFragment : Fragment() {
 
             // 点击事件：全部转发给 ViewModel 处理
             llLike.setOnClickListener {
-                sharedViewModel.doVideoAction(videoId, 2) { success ->
-                    if (success) handleLocalActionUpdate(llLikeIcon, llLikeCount)
-                }
+                sharedViewModel.doVideoAction(videoId, 2) { /* 状态由 userActionsLive / videoDetailLive 同步 */ }
             }
             llCoin.setOnClickListener {
-                sharedViewModel.doVideoAction(videoId, 4, 1) { success ->
-                    if (success) handleLocalActionUpdate(llCoinIcon, llCoinCount)
-                }
+                if (binding.llCoinIcon.isSelected) return@setOnClickListener
+                sharedViewModel.doVideoAction(videoId, 4, 1) { /* 状态由 userActionsLive 同步 */ }
             }
             llFav.setOnClickListener {
-                sharedViewModel.doVideoAction(videoId, 3) { success ->
-                    if (success) handleLocalActionUpdate(llFavIcon, llFavCount)
-                }
+                sharedViewModel.doVideoAction(videoId, 3) { /* 状态由 userActionsLive / videoDetailLive 同步 */ }
             }
         }
     }
@@ -251,23 +250,31 @@ class VideoIntroFragment : Fragment() {
     }
 
     /**
-     * 辅助方法：解析初始三连状态
+     * 解析视频三连状态（仅处理视频级 userAction，忽略评论点赞/点踩）
      */
     private fun parseActionState(actions: JSONArray?) {
-        if (actions == null) return
-        var (l, c, f) = Triple(false, false, false)
-        for (i in 0 until actions.length()) {
-            val type = actions.getJSONObject(i).optInt("actionType")
-            if (type == 2) l = true
-            if (type == 4) c = true
-            if (type == 3) f = true
+        var liked = false
+        var coined = false
+        var favorited = false
+        if (actions != null) {
+            for (i in 0 until actions.length()) {
+                val item = actions.getJSONObject(i)
+                if (!item.isNull("commentId") && item.optInt("commentId", 0) > 0) {
+                    continue
+                }
+                when (item.optInt("actionType")) {
+                    2 -> liked = true
+                    3 -> favorited = true
+                    4 -> coined = true
+                }
+            }
         }
-        binding.llLikeIcon.isSelected = l
-        binding.llLikeCount.isSelected = l
-        binding.llCoinIcon.isSelected = c
-        binding.llCoinCount.isSelected = c
-        binding.llFavIcon.isSelected = f
-        binding.llFavCount.isSelected = f
+        binding.llLikeIcon.isSelected = liked
+        binding.llLikeCount.isSelected = liked
+        binding.llCoinIcon.isSelected = coined
+        binding.llCoinCount.isSelected = coined
+        binding.llFavIcon.isSelected = favorited
+        binding.llFavCount.isSelected = favorited
     }
 
     /**
@@ -279,18 +286,6 @@ class VideoIntroFragment : Fragment() {
             setTextColor(if (followed) Color.parseColor("#999999") else Color.WHITE)
             setBackgroundResource(if (followed) R.drawable.bg_followed_button else R.drawable.bg_follow_button)
         }
-    }
-
-    /**
-     * UI 辅助：点击后的局部数字和颜色切换（非请求逻辑）
-     */
-    @SuppressLint("SetTextI18n")
-    private fun handleLocalActionUpdate(icon: View, text: TextView) {
-        val newState = !icon.isSelected
-        icon.isSelected = newState
-        text.isSelected = newState
-        val num = text.text.toString().toIntOrNull() ?: 0
-        text.text = (if (newState) num + 1 else (num - 1).coerceAtLeast(0)).toString()
     }
 
     private fun initRecommendList() {

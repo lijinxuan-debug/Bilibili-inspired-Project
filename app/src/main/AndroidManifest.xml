@@ -35,7 +35,6 @@
             android:theme="@style/Theme.Bilibili.Search" />
         <activity
             android:name=".ui.playVideo.PlayVideoActivity"
-            android:supportsPictureInPicture="true"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:exported="false"
             android:screenOrientation="unspecified" />

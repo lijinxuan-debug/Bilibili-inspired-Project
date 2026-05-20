@@ -1,5 +1,6 @@
 package com.example.bilibili.ui.focus
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.bilibili.R
 import com.example.bilibili.data.model.UserFriend
 import com.example.bilibili.databinding.FragmentFocusOnBinding
+import com.example.bilibili.ui.user.UserProfileActivity
 import kotlinx.coroutines.launch
 
 class FocusOnFragment : Fragment() {
@@ -31,11 +33,10 @@ class FocusOnFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         // 1. 初始化适配器
-        focusAdapter = FocusOnPagingAdapter { user ->
-            // 在关注页面中，所有用户都是已关注的
-            // 点击按钮直接显示取消关注确认弹窗
-            showCancelFollowDialog(user)
-        }
+        focusAdapter = FocusOnPagingAdapter(
+            onActionClick = { user -> showCancelFollowDialog(user) },
+            onUserClick = { user -> openUserProfile(user.otherUserId) }
+        )
 
         // 2. 设置 RecyclerView
         binding.rvFriends.layoutManager = LinearLayoutManager(requireContext())
@@ -76,6 +77,15 @@ class FocusOnFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun openUserProfile(userId: String) {
+        if (userId.isEmpty()) return
+        startActivity(
+            Intent(requireContext(), UserProfileActivity::class.java).apply {
+                putExtra("user_id", userId)
+            }
+        )
     }
 
     /**

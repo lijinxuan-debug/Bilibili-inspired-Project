@@ -56,8 +56,9 @@ class CommentThreadAdapter(
                 binding.tvReplyInfo.visibility = View.GONE
             }
 
-            // 时间
-            binding.tvTimePlace.text = item.postTime
+            // 时间 - 只显示日期部分
+            val dateOnly = item.postTime.split(" ").getOrNull(0) ?: item.postTime
+            binding.tvTimePlace.text = dateOnly
 
             // 评论内容
             binding.tvCommentText.text = item.content
@@ -65,13 +66,19 @@ class CommentThreadAdapter(
             // 图片显示和点击预览
             if (!item.imgPath.isNullOrEmpty()) {
                 binding.ivCommentImage.visibility = View.VISIBLE
-                GlideEngine.loadVideoCover(binding.root.context, item.imgPath, binding.ivCommentImage)
+                // 使用正确的图片加载方式
+                GlideEngine.loadCommentImage(binding.root.context, item.imgPath, binding.ivCommentImage)
                 binding.ivCommentImage.setOnClickListener {
                     onImageClick(item.imgPath)
                 }
             } else {
                 binding.ivCommentImage.visibility = View.GONE
                 binding.ivCommentImage.setOnClickListener(null)
+            }
+
+            // 整个评论区域点击事件 - 用于回复
+            binding.commentContentArea.setOnClickListener {
+                onReplyClick(item)
             }
 
             // 头像加载和点击

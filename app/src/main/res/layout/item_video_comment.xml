@@ -45,10 +45,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:maxWidth="300dp"
-        android:maxHeight="300dp"
+        android:minWidth="200dp"
+        android:minHeight="150dp"
+        android:maxWidth="350dp"
+        android:maxHeight="350dp"
         android:adjustViewBounds="true"
-        android:scaleType="fitStart"
+        android:scaleType="centerCrop"
         app:layout_constraintStart_toStartOf="@id/tv_user_name"
         app:layout_constraintTop_toBottomOf="@id/tv_comment_text"
         app:shapeAppearanceOverlay="@style/RoundedCorner_8dp"
@@ -179,23 +181,11 @@
             android:id="@+id/tv_collapse_replies"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="收起回复 ∧"
+            android:text="收起回复 ∨"
             android:textColor="#9499A0"
             android:textSize="12sp"
             android:padding="8dp"
             android:background="?attr/selectableItemBackgroundBorderless" />
     </LinearLayout>
-
-    <!-- 分割线（根据展开状态显示在不同位置） -->
-    <View
-        android:layout_width="0dp"
-        android:layout_height="0.5dp"
-        android:layout_marginTop="16dp"
-        android:background="#E3E5E7"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@id/tv_user_name"
-        app:layout_constraintBottom_toBottomOf="@id/ll_expanded_replies"
-        app:layout_constraintTop_toTopOf="@id/ll_expanded_replies"
-        app:layout_constraintVertical_bias="1.0" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -29,8 +29,8 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
     // 2. 使用 AsyncListDiffer 管理数据
     val differ = AsyncListDiffer(this, diffCallback)
 
-    fun setData(newList: List<CommentItem>) {
-        differ.submitList(newList)
+    fun setData(newList: List<CommentItem>, commitCallback: Runnable? = null) {
+        differ.submitList(newList, commitCallback)
     }
 
     // 3. 函数式回调接口
@@ -82,7 +82,9 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
             // 1. 基础信息绑定
             binding.tvUserName.text = item.nickName
             binding.tvCommentText.text = item.content
-            binding.tvTimePlace.text = "${item.postTime} 回复"
+            // 只显示日期部分，去掉时间
+            val dateOnly = item.postTime.split(" ").getOrNull(0) ?: item.postTime
+            binding.tvTimePlace.text = "${dateOnly} 回复"
             binding.tvLikeCount.text = item.likeCount.toString()
             binding.tvDislikeCount.text = item.hateCount.toString()
 
@@ -95,7 +97,8 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
             // 评论图片加载和点击预览
             if (!item.imgPath.isNullOrEmpty()) {
                 binding.ivCommentImage.visibility = View.VISIBLE
-                GlideEngine.loadVideoCover(binding.root.context, item.imgPath, binding.ivCommentImage)
+                // 使用正确的图片加载方式
+                GlideEngine.loadCommentImage(binding.root.context, item.imgPath, binding.ivCommentImage)
                 binding.ivCommentImage.setOnClickListener {
                     onImageClick?.invoke(item.imgPath)
                 }

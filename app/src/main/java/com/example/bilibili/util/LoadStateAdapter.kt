@@ -1,4 +1,4 @@
-package com.example.bilibili.ui.front
+package com.example.bilibili.util
 
 import android.view.LayoutInflater
 import android.view.View
@@ -22,8 +22,10 @@ class LoadStateAdapter(private val retry: () -> Unit) : LoadStateAdapter<LoadSta
     }
 
     override fun displayLoadStateAsItem(loadState: LoadState): Boolean {
-        // 只有在 Loading 和 Error 状态下才显示 item
-        return loadState is LoadState.Loading || loadState is LoadState.Error
+        return when (loadState) {
+            is LoadState.Loading, is LoadState.Error -> true
+            is LoadState.NotLoading -> loadState.endOfPaginationReached
+        }
     }
 
     class LoadStateViewHolder(
@@ -35,19 +37,24 @@ class LoadStateAdapter(private val retry: () -> Unit) : LoadStateAdapter<LoadSta
             when (loadState) {
                 is LoadState.Loading -> {
                     binding.progressBar.visibility = View.VISIBLE
+                    binding.tvLoadingHint.visibility = View.VISIBLE
                     binding.tvError.visibility = View.GONE
                     binding.btnRetry.visibility = View.GONE
                 }
                 is LoadState.Error -> {
                     binding.progressBar.visibility = View.GONE
+                    binding.tvLoadingHint.visibility = View.GONE
                     binding.tvError.visibility = View.VISIBLE
+                    binding.tvError.text = "加载失败，点击重试"
                     binding.btnRetry.visibility = View.VISIBLE
                     binding.btnRetry.setOnClickListener { retry() }
                 }
-                else -> {
+                is LoadState.NotLoading -> {
                     binding.progressBar.visibility = View.GONE
-                    binding.tvError.visibility = View.GONE
+                    binding.tvLoadingHint.visibility = View.GONE
                     binding.btnRetry.visibility = View.GONE
+                    binding.tvError.visibility = View.VISIBLE
+                    binding.tvError.text = "没有更多了"
                 }
             }
         }

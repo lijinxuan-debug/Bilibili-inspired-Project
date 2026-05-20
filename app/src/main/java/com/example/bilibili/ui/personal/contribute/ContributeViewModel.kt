@@ -5,17 +5,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.example.bilibili.data.api.PostService
-import com.example.bilibili.util.RetrofitClient
-import com.example.bilibili.util.SPUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 
 class ContributeViewModel : ViewModel() {
-    private val apiService = RetrofitClient.create(PostService::class.java)
-
     // 当前用户ID，初始为空
     private val _userId = MutableStateFlow("")
     val userId: StateFlow<String> = _userId

@@ -3,14 +3,12 @@ package com.example.bilibili.ui.front
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
-import androidx.recyclerview.widget.GridLayoutManager
 import com.example.bilibili.databinding.FragmentCategoryVideoBinding
+import com.example.bilibili.util.PagingUiHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -55,21 +53,14 @@ class CategoryVideoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 适配状态栏
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
-            val statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-            binding.root.setPadding(0, statusBarHeight, 0, 0)
-            insets
-        }
-
         // 初始化 RecyclerView 和 Adapter
         videoAdapter = VideoAdapter()
-        binding.recyclerView.apply {
-            layoutManager = GridLayoutManager(requireContext(), 2)
-            adapter = videoAdapter.withLoadStateFooter(
-                footer = LoadStateAdapter { videoAdapter.retry() }
-            )
-        }
+        PagingUiHelper.setupGridWithLoadStateFooter(
+            recyclerView = binding.recyclerView,
+            spanCount = 2,
+            contentAdapter = videoAdapter,
+            onRetry = { videoAdapter.retry() }
+        )
 
         // 设置下拉刷新
         binding.swipeRefreshLayout.setColorSchemeColors(android.graphics.Color.parseColor("#FB7299"))

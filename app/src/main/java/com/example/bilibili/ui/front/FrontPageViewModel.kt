@@ -3,8 +3,8 @@ package com.example.bilibili.ui.front
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
-import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
+import com.example.bilibili.util.PagingDefaults
 import androidx.paging.map
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,11 +23,7 @@ class FrontPageViewModel : ViewModel() {
         _currentCategoryId
             .flatMapLatest { categoryId ->
                 Pager(
-                    config = PagingConfig(
-                        pageSize = 20,
-                        enablePlaceholders = false,
-                        initialLoadSize = 20
-                    ),
+                    config = PagingDefaults.videoListConfig(),
                     pagingSourceFactory = { FrontPagePagingSource(categoryId) }
                 ).flow
             }

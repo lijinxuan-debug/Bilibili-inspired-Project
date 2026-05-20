@@ -15,10 +15,7 @@ class ContributeVideoPagingSource(
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, VideoItem> {
         return try {
-            // 获取页码，默认从第1页开始
             val page = params.key ?: 1
-
-            // 调用接口获取数据
             val response = service.loadVideoList(userId = userId, orderType = orderType, pageNo = page)
             val jsonObject = JSONObject(response)
 
@@ -28,20 +25,21 @@ class ContributeVideoPagingSource(
 
                 for (i in 0 until jsonArray.length()) {
                     val item = jsonArray.getJSONObject(i)
-                    list.add(VideoItem(
-                        videoId = item.getString("videoId"),
-                        videoName = item.getString("videoName"),
-                        videoCover = item.getString("videoCover"),
-                        playCount = item.optInt("playCount"),
-                        commentCount = item.optInt("commentCount"),
-                        danmuCount = item.optInt("danmuCount"),
-                        duration = item.optInt("duration"),
-                        createTime = item.getString("createTime"),
-                        nickName = if (item.isNull("nickName")) "未知UP" else item.getString("nickName")
-                    ))
+                    list.add(
+                        VideoItem(
+                            videoId = item.getString("videoId"),
+                            videoName = item.getString("videoName"),
+                            videoCover = item.getString("videoCover"),
+                            playCount = item.optInt("playCount"),
+                            commentCount = item.optInt("commentCount"),
+                            danmuCount = item.optInt("danmuCount"),
+                            duration = item.optInt("duration"),
+                            createTime = item.getString("createTime"),
+                            nickName = if (item.isNull("nickName")) "未知UP" else item.getString("nickName")
+                        )
+                    )
                 }
 
-                // 判断是否还有下一页
                 val hasMore = list.size >= params.loadSize
                 val nextPage = if (hasMore) page + 1 else null
 
@@ -59,7 +57,6 @@ class ContributeVideoPagingSource(
     }
 
     override fun getRefreshKey(state: PagingState<Int, VideoItem>): Int? {
-        // 返回刷新时的页码
         return state.anchorPosition?.let { anchorPosition ->
             state.closestPageToPosition(anchorPosition)?.prevKey?.plus(1)
                 ?: state.closestPageToPosition(anchorPosition)?.nextKey?.minus(1)
