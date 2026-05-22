@@ -79,6 +79,10 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: CommentItem) {
+            disableRipple(binding.root)
+            disableRipple(binding.llReplyPreview)
+            disableRipple(binding.tvCollapseReplies)
+
             // 1. 基础信息绑定
             binding.tvUserName.text = item.nickName
             binding.tvCommentText.text = item.content
@@ -182,78 +186,67 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
 
         private fun setupReplySection(item: CommentItem) {
             val children = item.children
-            val isExpanded = expandedCommentIds.contains(item.commentId)
-
-            // 如果有子评论
-            if (!children.isNullOrEmpty()) {
-                if (isExpanded) {
-                    // 展开状态：显示子评论列表
-                    binding.llReplyPreview.visibility = View.GONE
-                    binding.llExpandedReplies.visibility = View.VISIBLE
-
-                    // 设置收起按钮点击
-                    binding.tvCollapseReplies.setOnClickListener {
-                        toggleExpand(item.commentId)
-                    }
-
-                    // 设置子评论适配器
-                    if (binding.rvChildReplies.adapter == null) {
-                        binding.rvChildReplies.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(binding.root.context)
-                        binding.rvChildReplies.adapter = CommentThreadAdapter(
-                            onAvatarClick = { userId ->
-                                onAvatarClick?.invoke(userId)
-                            },
-                            onReplyClick = { replyItem ->
-                                // 子评论点击回复，传递到外层的onCommentClick
-                                onCommentClick?.invoke(replyItem)
-                            },
-                            onLikeClick = { replyItem ->
-                                // 子评论点击点赞，传递到外层的onLikeClick
-                                onLikeClick?.invoke(replyItem)
-                            },
-                            onDislikeClick = { replyItem ->
-                                // 子评论点击踩，传递到外层的onDislikeClick
-                                onDislikeClick?.invoke(replyItem)
-                            },
-                            onImageClick = { imagePath ->
-                                // 子评论图片点击预览
-                                onImageClick?.invoke(imagePath)
-                            }
-                        )
-                    }
-
-                    // 每次都更新数据，确保显示最新状态
-                    (binding.rvChildReplies.adapter as CommentThreadAdapter).submitList(children, isOriginalComment = false)
-                } else {
-                    // 收起状态：显示回复预览
-                    binding.llReplyPreview.visibility = View.VISIBLE
-                    binding.llExpandedReplies.visibility = View.GONE
-
-                    val firstReply = children[0]
-                    binding.tvFirstReply.text = "${firstReply.nickName}: ${firstReply.content}"
-
-                    // 点击回复预览展开
-                    binding.llReplyPreview.setOnClickListener {
-                        toggleExpand(item.commentId)
-                    }
-
-                    if (children.size > 1) {
-                        binding.tvReplyCountLink.visibility = View.VISIBLE
-                        binding.tvReplyCountLink.text = "共${children.size}条回复 >"
-
-                        // 点击"共X条回复 >"也展开
-                        binding.tvReplyCountLink.setOnClickListener {
-                            toggleExpand(item.commentId)
-                        }
-                    } else {
-                        binding.tvReplyCountLink.visibility = View.GONE
-                    }
-                }
-            } else {
-                // 没有子评论
+            if (children.isNullOrEmpty()) {
                 binding.llReplyPreview.visibility = View.GONE
                 binding.llExpandedReplies.visibility = View.GONE
+                return
             }
+
+            // 仅 1 条回复：直接展示完整子评论，不用灰色摘要框
+            if (children.size == 1) {
+                binding.llReplyPreview.visibility = View.GONE
+                binding.llExpandedReplies.visibility = View.VISIBLE
+                binding.tvCollapseReplies.visibility = View.GONE
+                bindChildReplies(children)
+                return
+            }
+
+            val isExpanded = expandedCommentIds.contains(item.commentId)
+            if (isExpanded) {
+                binding.llReplyPreview.visibility = View.GONE
+                binding.llExpandedReplies.visibility = View.VISIBLE
+                binding.tvCollapseReplies.visibility = View.VISIBLE
+                binding.tvCollapseReplies.setOnClickListener {
+                    toggleExpand(item.commentId)
+                }
+                bindChildReplies(children)
+            } else {
+                binding.llReplyPreview.visibility = View.VISIBLE
+                binding.llExpandedReplies.visibility = View.GONE
+                val firstReply = children[0]
+                binding.tvFirstReply.text = "${firstReply.nickName}: ${firstReply.content}"
+                binding.llReplyPreview.setOnClickListener {
+                    toggleExpand(item.commentId)
+                }
+                binding.tvReplyCountLink.visibility = View.VISIBLE
+                binding.tvReplyCountLink.text = "共${children.size}条回复 >"
+                binding.tvReplyCountLink.setOnClickListener {
+                    toggleExpand(item.commentId)
+                }
+            }
+        }
+
+        private fun bindChildReplies(children: List<CommentItem>) {
+            if (binding.rvChildReplies.adapter == null) {
+                binding.rvChildReplies.layoutManager =
+                    androidx.recyclerview.widget.LinearLayoutManager(binding.root.context)
+                binding.rvChildReplies.adapter = CommentThreadAdapter(
+                    onAvatarClick = { userId -> onAvatarClick?.invoke(userId) },
+                    onReplyClick = { replyItem -> onCommentClick?.invoke(replyItem) },
+                    onLikeClick = { replyItem -> onLikeClick?.invoke(replyItem) },
+                    onDislikeClick = { replyItem -> onDislikeClick?.invoke(replyItem) },
+                    onImageClick = { imagePath -> onImageClick?.invoke(imagePath) },
+                )
+            }
+            (binding.rvChildReplies.adapter as CommentThreadAdapter).submitList(
+                children,
+                isOriginalComment = false,
+            )
+        }
+
+        private fun disableRipple(view: View) {
+            view.foreground = null
+            view.stateListAnimator = null
         }
     }
 }

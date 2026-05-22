@@ -45,7 +45,12 @@ class CommentThreadAdapter(
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: CommentItem, isOriginalComment: Boolean) {
-            // 用户名
+            binding.root.foreground = null
+            binding.commentContentArea.foreground = null
+            binding.llLike.foreground = null
+            binding.llDislike.foreground = null
+            binding.llReply.foreground = null
+
             binding.tvUserName.text = item.nickName
 
             // 回复信息（如果是子评论且不是原主评论）

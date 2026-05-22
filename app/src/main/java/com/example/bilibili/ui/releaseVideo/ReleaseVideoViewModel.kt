@@ -140,6 +140,11 @@ class ReleaseVideoViewModel(application: Application): AndroidViewModel(applicat
             return
         }
 
+        if (tags.isEmpty()) {
+            postStatus.postValue("请至少添加一个标签")
+            return
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val postService = RetrofitClient.create(PostService::class.java)

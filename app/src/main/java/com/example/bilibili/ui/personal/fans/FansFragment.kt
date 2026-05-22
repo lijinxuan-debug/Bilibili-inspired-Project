@@ -51,8 +51,10 @@ class FansFragment : Fragment() {
         // 3. 观察数据
         viewModel.fanList.observe(viewLifecycleOwner) { list ->
             fansAdapter.updateData(list)
-            // 更新顶部人数显示
             binding.tvCountNumber.text = "${list.size}人"
+            val isEmpty = list.isEmpty()
+            binding.emptyState.llEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+            binding.rvFans.visibility = if (isEmpty) View.GONE else View.VISIBLE
         }
 
         // 4. 观察Toast消息

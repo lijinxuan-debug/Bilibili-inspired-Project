@@ -228,10 +228,11 @@
         android:id="@+id/iv_captcha_code"
         android:layout_width="100dp"
         android:layout_height="60dp"
+        android:clickable="true"
+        android:focusable="true"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_placeholder_code"
         android:contentDescription="@string/verifyCode"
-
         app:layout_constraintBottom_toBottomOf="@+id/et_captcha"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/et_captcha" />

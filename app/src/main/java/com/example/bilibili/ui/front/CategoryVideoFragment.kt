@@ -83,9 +83,12 @@ class CategoryVideoFragment : Fragment() {
             videoAdapter.loadStateFlow.collect { loadState ->
                 binding.swipeRefreshLayout.isRefreshing = loadState.refresh is LoadState.Loading
 
-                val isEmpty = videoAdapter.itemCount == 0 && loadState.refresh !is LoadState.Loading
-                binding.llEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
-                binding.recyclerView.visibility = if (isEmpty) View.GONE else View.VISIBLE
+                PagingUiHelper.updateEmptyState(
+                    binding.emptyState.llEmpty,
+                    binding.recyclerView,
+                    videoAdapter,
+                    loadState,
+                )
 
                 if (loadState.refresh is LoadState.Error) {
                     val error = (loadState.refresh as LoadState.Error).error

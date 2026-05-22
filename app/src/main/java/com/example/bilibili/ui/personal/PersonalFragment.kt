@@ -21,6 +21,8 @@ import com.example.bilibili.ui.personal.collect.CollectFragment
 import com.example.bilibili.ui.personal.contribute.ContributeFragment
 import com.example.bilibili.ui.personal.home.HomeFragment
 import com.example.bilibili.util.GlideEngine
+import com.example.bilibili.util.UserInfoText
+import com.example.bilibili.util.optNormalizedString
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.SPUtils
 import com.google.android.material.tabs.TabLayoutMediator
@@ -52,6 +54,9 @@ class PersonalFragment : Fragment() {
 
         setupViewPagerAndTabs()
 
+        // 先用本地缓存头像，避免等接口期间一直显示默认图
+        GlideEngine.loadUserAvatar(requireContext(), SPUtils.getAvatar(), binding.ivAvatar)
+
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val responseString = withContext(Dispatchers.IO) {
@@ -75,9 +80,20 @@ class PersonalFragment : Fragment() {
                         // 获赞数量
                         tvLikeCount.text = data.optInt("likeCount").toString()
                         // 昵称
-                        tvNickname.text = data.getString("nickName")
-                        // 个人描述
-                        tvDescription.text = data.getString("personalIntroduction")
+                        tvNickname.text = data.optNormalizedString("nickName")
+                            .ifEmpty { "用户" }
+                        tvDescription.text = UserInfoText.displayIntroduction(
+                            data.optNormalizedString("personalIntroduction")
+                        )
+                        SPUtils.savePersonalIntroduction(
+                            UserInfoText.storageIntroduction(
+                                data.optNormalizedString("personalIntroduction")
+                            )
+                        )
+                        SPUtils.saveSchool(
+                            UserInfoText.storageSchool(data.optNormalizedString("school"))
+                        )
+                        SPUtils.saveBirthday(data.optNormalizedString("birthday"))
                     }
                 }
             } catch (e: Exception) {
@@ -153,6 +169,14 @@ class PersonalFragment : Fragment() {
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             tab.text = tabTitles[position]
         }.attach()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 从编辑资料页返回后刷新头像（不必重启 App）
+        if (_binding != null) {
+            GlideEngine.loadUserAvatar(requireContext(), SPUtils.getAvatar(), binding.ivAvatar)
+        }
     }
 
     override fun onDestroyView() {

@@ -200,7 +200,7 @@ object SPUtils {
      * 获取生日
      */
     fun getBirthday(): String {
-        return prefs.getString(BIRTHDAY, "") ?: ""
+        return UserInfoText.normalize(prefs.getString(BIRTHDAY, ""))
     }
 
     /**
@@ -214,7 +214,7 @@ object SPUtils {
      * 获取学校
      */
     fun getSchool(): String {
-        return prefs.getString(SCHOOL, "") ?: ""
+        return UserInfoText.normalize(prefs.getString(SCHOOL, ""))
     }
 
     /**
@@ -228,7 +228,7 @@ object SPUtils {
      * 获取个人简介
      */
     fun getPersonalIntroduction(): String {
-        return prefs.getString(PERSONAL_INTRODUCTION, "") ?: ""
+        return UserInfoText.normalize(prefs.getString(PERSONAL_INTRODUCTION, ""))
     }
 
     /**

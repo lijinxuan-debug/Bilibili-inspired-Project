@@ -28,7 +28,7 @@
             android:layout_marginStart="12dp"
             android:layout_weight="1"
             android:background="@drawable/bg_search_bar"
-            android:hint="太原理工大学·1分钟前更新"
+            android:hint="@string/search_page_hint"
             android:imeOptions="actionSearch"
             android:inputType="text"
             android:paddingStart="12dp"

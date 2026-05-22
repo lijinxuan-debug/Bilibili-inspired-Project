@@ -128,32 +128,28 @@ class VideoCommentFragment : Fragment() {
             return
         }
 
-        // 乐观更新 UI
-        val oldIsLiked = commentItem.isLiked
-        commentItem.isLiked = !oldIsLiked
-
-        // 互斥：点赞后取消踩
-        if (commentItem.isLiked) {
-            commentItem.isHated = false
-        }
-
+        val snapshot = commentActionSnapshot(commentItem)
+        CommentActionHelper.applyLikeToggle(commentItem)
         notifyCommentItemChanged(commentItem)
 
         viewModel.doCommentAction(
             videoId = videoId,
             commentId = commentItem.commentId,
-            actionType = 0 // 0-点赞
+            actionType = 0,
         ) { success ->
             if (!success) {
-                commentItem.isLiked = oldIsLiked
+                CommentActionHelper.revertLikeToggle(
+                    commentItem,
+                    snapshot.isLiked,
+                    snapshot.isHated,
+                    snapshot.likeCount,
+                    snapshot.hateCount,
+                )
                 notifyCommentItemChanged(commentItem)
             }
         }
     }
 
-    /**
-     * 处理踩操作
-     */
     private fun handleDislikeAction(commentItem: CommentItem) {
         val videoId = currentVideoId
         if (videoId.isNullOrEmpty()) {
@@ -161,28 +157,41 @@ class VideoCommentFragment : Fragment() {
             return
         }
 
-        // 乐观更新 UI
-        val oldIsHated = commentItem.isHated
-        commentItem.isHated = !oldIsHated
-
-        // 互斥：踩后取消点赞
-        if (commentItem.isHated) {
-            commentItem.isLiked = false
-        }
-
+        val snapshot = commentActionSnapshot(commentItem)
+        CommentActionHelper.applyDislikeToggle(commentItem)
         notifyCommentItemChanged(commentItem)
 
         viewModel.doCommentAction(
             videoId = videoId,
             commentId = commentItem.commentId,
-            actionType = 1 // 1-踩
+            actionType = 1,
         ) { success ->
             if (!success) {
-                commentItem.isHated = oldIsHated
+                CommentActionHelper.revertDislikeToggle(
+                    commentItem,
+                    snapshot.isLiked,
+                    snapshot.isHated,
+                    snapshot.likeCount,
+                    snapshot.hateCount,
+                )
                 notifyCommentItemChanged(commentItem)
             }
         }
     }
+
+    private data class CommentActionSnapshot(
+        val isLiked: Boolean,
+        val isHated: Boolean,
+        val likeCount: Int,
+        val hateCount: Int,
+    )
+
+    private fun commentActionSnapshot(item: CommentItem) = CommentActionSnapshot(
+        isLiked = item.isLiked,
+        isHated = item.isHated,
+        likeCount = item.likeCount,
+        hateCount = item.hateCount,
+    )
 
     private fun setupBottomBar() {
         // 点击输入框打开评论对话框
@@ -212,9 +221,17 @@ class VideoCommentFragment : Fragment() {
     }
 
     private fun notifyCommentItemChanged(commentItem: CommentItem) {
-        val position = commentAdapter.differ.currentList.indexOf(commentItem)
-        if (position >= 0) {
-            commentAdapter.notifyItemChanged(position)
+        val list = commentAdapter.differ.currentList
+        val topIndex = list.indexOfFirst { it.commentId == commentItem.commentId }
+        if (topIndex >= 0) {
+            commentAdapter.notifyItemChanged(topIndex)
+            return
+        }
+        val parentIndex = list.indexOfFirst { parent ->
+            parent.children?.any { it.commentId == commentItem.commentId } == true
+        }
+        if (parentIndex >= 0) {
+            commentAdapter.notifyItemChanged(parentIndex)
         }
     }
 

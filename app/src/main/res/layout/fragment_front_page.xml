@@ -61,7 +61,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="大家都在搜：跳舞..."
+                    android:text="@string/search_bar_hint"
                     android:textColor="#999999"
                     android:textSize="13sp" />
             </LinearLayout>

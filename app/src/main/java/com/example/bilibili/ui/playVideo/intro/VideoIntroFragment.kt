@@ -215,7 +215,7 @@ class VideoIntroFragment : Fragment() {
         binding.apply {
             tvAuthorName.text = user.optString("nickName")
             tvAuthorStats.text = "${user.optString("fansCount")}粉丝"
-            GlideEngine.loadVideoCover(requireContext(), user.optString("avatar"), ivAvatar)
+            GlideEngine.loadUserAvatar(requireContext(), user.optString("avatar"), ivAvatar)
 
             // 点击头像跳转到 UP 主主页
             ivAvatar.setOnClickListener {
@@ -280,11 +280,8 @@ class VideoIntroFragment : Fragment() {
 
     private fun initRecommendList() {
         recommendAdapter = RecommendVideoAdapter { recommendItem ->
-            // 点击推荐视频跳转播放
-            val intent = Intent(requireContext(), com.example.bilibili.ui.playVideo.PlayVideoActivity::class.java).apply {
-                putExtra("video_id", recommendItem.videoId)
-            }
-            startActivity(intent)
+            (activity as? com.example.bilibili.ui.playVideo.PlayVideoActivity)
+                ?.openRecommendVideo(recommendItem.videoId)
         }
         binding.rvRecommend.layoutManager = LinearLayoutManager(context)
         binding.rvRecommend.isNestedScrollingEnabled = false

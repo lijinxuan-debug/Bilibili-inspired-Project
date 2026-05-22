@@ -25,6 +25,9 @@ import com.example.bilibili.databinding.ActivityEditBinding
 import com.example.bilibili.databinding.DialogEditTextBinding
 import com.example.bilibili.databinding.DialogGenderSelectBinding
 import com.example.bilibili.util.GlideEngine
+import com.example.bilibili.util.PermissionHelper
+import com.example.bilibili.util.UserInfoText
+import com.example.bilibili.util.optNormalizedString
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.SPUtils
 import com.example.bilibili.util.ToastUtils
@@ -207,9 +210,11 @@ class EditActivity : AppCompatActivity() {
         avatar = data.optString("avatar", "")
         nickname = data.optString("nickName", "")
         sex = data.optInt("sex", 2)
-        birthday = data.optString("birthday", "")
-        signature = data.optString("personalIntroduction", "")
-        school = data.optString("school", "")
+        birthday = data.optNormalizedString("birthday")
+        signature = UserInfoText.storageIntroduction(
+            data.optNormalizedString("personalIntroduction")
+        )
+        school = UserInfoText.storageSchool(data.optNormalizedString("school"))
 
         // 初始化临时数据
         tempNickname = nickname
@@ -229,13 +234,17 @@ class EditActivity : AppCompatActivity() {
         }
         binding.tvGender.text = sexText
 
-        binding.tvBirthday.text = tempBirthday.ifEmpty { "未设置" }
-        binding.tvSignature.text = tempSignature.ifEmpty { "未设置" }
-        binding.tvSchool.text = tempSchool.ifEmpty { "未设置" }
+        binding.tvBirthday.text = UserInfoText.displayBirthday(tempBirthday)
+        binding.tvSignature.text = UserInfoText.displayIntroduction(tempSignature)
+        binding.tvSchool.text = UserInfoText.displaySchool(tempSchool)
         binding.tvUid.text = userId
     }
 
     private fun selectAvatar() {
+        PermissionHelper.requestGalleryImage(this) { openAvatarPicker() }
+    }
+
+    private fun openAvatarPicker() {
         PictureSelector.create(this)
             .openGallery(SelectMimeType.ofImage())
             .setImageEngine(GlideEngine.createGlideImageEngine())
@@ -247,13 +256,11 @@ class EditActivity : AppCompatActivity() {
                 override fun onResult(result: ArrayList<LocalMedia>) {
                     if (result.isNotEmpty()) {
                         val media = result[0]
-                        val filePath = media.realPath  // 使用realPath获取真实路径
+                        val filePath = resolvePickerImagePath(media) ?: return
 
-                        if (filePath != null) {
-                            tempAvatarFile = File(filePath)
-                            GlideEngine.loadUserAvatar(this@EditActivity, filePath, binding.ivAvatar)
-                            hasUnsavedChanges = true
-                        }
+                        tempAvatarFile = File(filePath)
+                        GlideEngine.loadUserAvatar(this@EditActivity, filePath, binding.ivAvatar)
+                        hasUnsavedChanges = true
                     }
                 }
 
@@ -410,7 +417,7 @@ class EditActivity : AppCompatActivity() {
             onConfirmed = { newSignature ->
                 if (newSignature != tempSignature) {
                     tempSignature = newSignature
-                    binding.tvSignature.text = newSignature.ifEmpty { "未设置" }
+                    binding.tvSignature.text = UserInfoText.displayIntroduction(newSignature)
                     hasUnsavedChanges = true
                 }
             }
@@ -424,7 +431,7 @@ class EditActivity : AppCompatActivity() {
             onConfirmed = { newSchool ->
                 if (newSchool != tempSchool) {
                     tempSchool = newSchool
-                    binding.tvSchool.text = newSchool.ifEmpty { "未设置" }
+                    binding.tvSchool.text = UserInfoText.displaySchool(newSchool)
                     hasUnsavedChanges = true
                 }
             }
@@ -562,9 +569,15 @@ class EditActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        // 清理临时文件
-        tempAvatarFile?.delete()
+    /** 优先沙箱/压缩路径，避免误删用户相册原图 */
+    private fun resolvePickerImagePath(media: LocalMedia): String? {
+        val candidates = listOfNotNull(
+            media.sandboxPath,
+            media.compressPath,
+            media.realPath,
+            media.path,
+            media.availablePath
+        )
+        return candidates.firstOrNull { it.isNotBlank() && File(it).exists() }
     }
 }

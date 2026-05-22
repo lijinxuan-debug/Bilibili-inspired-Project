@@ -23,6 +23,7 @@ import com.example.bilibili.util.GlideEngine
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.SPUtils
 import com.example.bilibili.util.ToastUtils
+import com.example.bilibili.util.UserInfoText
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -208,11 +209,7 @@ class UserProfileActivity : AppCompatActivity() {
         binding.tvNickname.text = userInfo.nickName
 
         // 设置简介
-        binding.tvDescription.text = if (userInfo.personalIntroduction.isNullOrEmpty()) {
-            "这个人很懒，什么都没留下"
-        } else {
-            userInfo.personalIntroduction
-        }
+        binding.tvDescription.text = UserInfoText.displayIntroduction(userInfo.personalIntroduction)
 
         // 设置统计数据
         binding.tvFansCount.text = userInfo.fansCount.toString()

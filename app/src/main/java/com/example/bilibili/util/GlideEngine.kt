@@ -1,8 +1,10 @@
 package com.example.bilibili.util
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import android.widget.ImageView
+import java.io.File
 import androidx.appcompat.app.AppCompatActivity // 确保导入
 import com.bumptech.glide.Glide
 import com.example.bilibili.R
@@ -83,28 +85,31 @@ object GlideEngine : ImageEngine {
 
     /**
      * 加载用户头像
-     * @param avatarPath 头像路径，如 "cover/2026-04-10/qahUyf..."
+     * @param avatarPath 服务端相对路径、http(s) URL、本地绝对路径或 content://
      */
-    fun loadUserAvatar(context: Context, avatarPath: String, imageView: ImageView) {
+    fun loadUserAvatar(context: Context, avatarPath: String?, imageView: ImageView) {
         if (!isContextValid(context)) return
 
-        if (avatarPath.isEmpty()) {
-            // 如果没有头像路径，直接加载默认头像
-            Glide.with(context)
-                .load(R.drawable.ic_avatar_default)
-                .placeholder(R.drawable.ic_avatar_default)
-                .circleCrop()
-                .into(imageView)
-        } else {
-            // 如果有头像路径，从服务器加载
-            val fullUrl = "${RetrofitClient.BASE_URL}file/getImage?sourceName=$avatarPath"
-            Glide.with(context)
-                .load(fullUrl)
-                .placeholder(R.drawable.ic_avatar_default)
-                .error(R.drawable.ic_avatar_default)
-                .circleCrop()
-                .into(imageView)
+        val path = UserInfoText.normalize(avatarPath)
+        val model: Any? = resolveAvatarModel(path)
+        Glide.with(context)
+            .load(model)
+            .placeholder(R.drawable.ic_avatar_default)
+            .error(R.drawable.ic_avatar_default)
+            .circleCrop()
+            .into(imageView)
+    }
+
+    /** 相册选图后的本地预览，勿走 getImage 接口 */
+    private fun resolveAvatarModel(path: String): Any? {
+        if (path.isEmpty()) return R.drawable.ic_avatar_default
+        if (path.startsWith("http://") || path.startsWith("https://")) return path
+        if (path.startsWith("content://")) return Uri.parse(path)
+        if (path.startsWith("/")) {
+            val file = File(path)
+            if (file.exists()) return file
         }
+        return "${RetrofitClient.BASE_URL}file/getImage?sourceName=$path"
     }
 
     /**

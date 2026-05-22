@@ -75,11 +75,7 @@ class SearchActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // 2. 使用数据
-        if (hotWords.isNotEmpty()) {
-            // 设置搜索框内的热搜词
-            binding.etSearch.hint = hotWords[0]
-        }
+        binding.etSearch.hint = getString(R.string.search_page_hint)
 
         binding.rvSearchResult.apply {
             layoutManager = LinearLayoutManager(this@SearchActivity)

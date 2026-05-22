@@ -10,9 +10,11 @@ import com.example.bilibili.R
 import com.example.bilibili.data.api.PostService
 import com.example.bilibili.databinding.ActivityEditProfileBinding
 import com.example.bilibili.util.GlideEngine
+import com.example.bilibili.util.PermissionHelper
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.SPUtils
 import com.example.bilibili.util.ToastUtils
+import com.example.bilibili.util.UserInfoText
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.entity.LocalMedia
@@ -74,8 +76,10 @@ class EditProfileActivity : AppCompatActivity() {
     private fun loadUserInfo() {
         // 从SPUtils加载用户信息并填充到界面
         binding.etNickname.setText(SPUtils.getNickname())
-        binding.etSchool.setText(SPUtils.getSchool())
-        binding.etIntroduction.setText(SPUtils.getPersonalIntroduction())
+        binding.etSchool.setText(UserInfoText.storageSchool(SPUtils.getSchool()))
+        binding.etIntroduction.setText(
+            UserInfoText.storageIntroduction(SPUtils.getPersonalIntroduction())
+        )
         binding.etNotice.setText(SPUtils.getNoticeInfo())
 
         // 加载头像
@@ -90,13 +94,14 @@ class EditProfileActivity : AppCompatActivity() {
         }
 
         // 设置生日
-        val birthday = SPUtils.getBirthday()
-        if (birthday.isNotEmpty()) {
-            binding.tvBirthday.text = birthday
-        }
+        binding.tvBirthday.text = UserInfoText.displayBirthday(SPUtils.getBirthday())
     }
 
     private fun selectAvatar() {
+        PermissionHelper.requestGalleryImage(this) { openAvatarPicker() }
+    }
+
+    private fun openAvatarPicker() {
         PictureSelector.create(this)
             .openGallery(SelectMimeType.ofImage())
             .setImageEngine(GlideEngine.createGlideImageEngine())
@@ -108,12 +113,10 @@ class EditProfileActivity : AppCompatActivity() {
                 override fun onResult(result: ArrayList<LocalMedia>) {
                     if (result.isNotEmpty()) {
                         val media = result[0]
-                        val filePath = media.path
+                        val filePath = resolvePickerImagePath(media) ?: return
 
-                        if (filePath != null) {
-                            selectedAvatarFile = File(filePath)
-                            GlideEngine.loadUserAvatar(this@EditProfileActivity, filePath, binding.ivAvatar)
-                        }
+                        selectedAvatarFile = File(filePath)
+                        GlideEngine.loadUserAvatar(this@EditProfileActivity, filePath, binding.ivAvatar)
                     }
                 }
 
@@ -256,9 +259,14 @@ class EditProfileActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        // 清理临时文件
-        selectedAvatarFile?.delete()
+    private fun resolvePickerImagePath(media: LocalMedia): String? {
+        val candidates = listOfNotNull(
+            media.sandboxPath,
+            media.compressPath,
+            media.realPath,
+            media.path,
+            media.availablePath
+        )
+        return candidates.firstOrNull { it.isNotBlank() && File(it).exists() }
     }
 }

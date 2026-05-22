@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bilibili.data.api.PostService
 import com.example.bilibili.util.RetrofitClient
+import com.example.bilibili.util.UserInfoText
+import com.example.bilibili.util.optNormalizedString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,10 +48,10 @@ class UserProfileViewModel : ViewModel() {
             nickName = data.optString("nickName"),
             email = data.optString("email"),
             sex = data.optInt("sex"),
-            birthday = data.optString("birthday"),
-            school = data.optString("school"),
-            personalIntroduction = data.optString("personalIntroduction"),
-            noticeInfo = data.optString("noticeInfo"),
+            birthday = data.optNormalizedString("birthday"),
+            school = data.optNormalizedString("school"),
+            personalIntroduction = data.optNormalizedString("personalIntroduction"),
+            noticeInfo = data.optNormalizedString("noticeInfo"),
             theme = data.optInt("theme"),
             fansCount = data.optInt("fansCount"),
             focusCount = data.optInt("focusCount"),

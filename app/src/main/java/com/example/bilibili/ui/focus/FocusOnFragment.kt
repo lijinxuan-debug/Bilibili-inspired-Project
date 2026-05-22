@@ -15,6 +15,7 @@ import com.example.bilibili.R
 import com.example.bilibili.data.model.UserFriend
 import com.example.bilibili.databinding.FragmentFocusOnBinding
 import com.example.bilibili.ui.user.UserProfileActivity
+import com.example.bilibili.util.PagingUiHelper
 import kotlinx.coroutines.launch
 
 class FocusOnFragment : Fragment() {
@@ -58,22 +59,15 @@ class FocusOnFragment : Fragment() {
         // 5. 监听加载状态
         viewLifecycleOwner.lifecycleScope.launch {
             focusAdapter.loadStateFlow.collect { loadState ->
-                // 处理下拉刷新状态
                 binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
-
-                // 可以在这里显示加载状态
-                when (loadState.refresh) {
-                    is LoadState.Loading -> {
-                        // 显示加载中
-                    }
-                    is LoadState.NotLoading -> {
-                        // 加载完成
-                        // 更新顶部人数显示（注意：Paging3的总数可能不准确）
-                        binding.tvCountNumber.text = "${focusAdapter.itemCount}人"
-                    }
-                    is LoadState.Error -> {
-                        // 显示错误信息
-                    }
+                PagingUiHelper.updateEmptyState(
+                    binding.emptyState.llEmpty,
+                    binding.rvFriends,
+                    focusAdapter,
+                    loadState,
+                )
+                if (loadState.refresh is LoadState.NotLoading) {
+                    binding.tvCountNumber.text = "${focusAdapter.itemCount}人"
                 }
             }
         }

@@ -51,6 +51,7 @@ class LoginActivity : AppCompatActivity() {
 
         // 初始化验证码
         loadCaptcha()
+        binding.ivCaptchaCode.setOnClickListener { loadCaptcha() }
 
         // 监听输入框输入
         initRegisterButtonState()
@@ -96,7 +97,9 @@ class LoginActivity : AppCompatActivity() {
                     val root = JSONObject(responseString)
                     if (root.optInt("code") == 200) {
                         ToastUtils.showShort(this@LoginActivity, "登录成功")
-                        AuthSessionHelper.saveLoginData(root.getJSONObject("data"))
+                        val data = root.getJSONObject("data")
+                        AuthSessionHelper.saveLoginData(data)
+                        AuthSessionHelper.syncProfileFromServer(data.getString("userId"))
                         AuthSessionHelper.navigateToMainAndFinish(this@LoginActivity)
                     } else {
                         ToastUtils.showShort(this@LoginActivity,root.getString("message"))
@@ -139,7 +142,7 @@ class LoginActivity : AppCompatActivity() {
                     // 对base64进行解码
                     val imageBytes = Base64.decode(base64Data, Base64.DEFAULT)
                     Glide.with(this@LoginActivity).load(imageBytes).into(binding.ivCaptchaCode)
-
+                    binding.etCaptcha.text?.clear()
                 }
 
             } catch (e: Exception) {

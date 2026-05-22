@@ -16,6 +16,7 @@ import com.example.bilibili.R
 import com.example.bilibili.data.model.UserFriend
 import com.example.bilibili.databinding.FragmentMemberShipBinding
 import com.example.bilibili.ui.user.UserProfileActivity
+import com.example.bilibili.util.PagingUiHelper
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -66,7 +67,12 @@ class MemberShipFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             fansAdapter.loadStateFlow.collect { loadState ->
                 binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
-
+                PagingUiHelper.updateEmptyState(
+                    binding.emptyState.llEmpty,
+                    binding.rvFans,
+                    fansAdapter,
+                    loadState,
+                )
                 if (loadState.refresh is LoadState.NotLoading) {
                     binding.tvCountNumber.text = "${fansAdapter.itemCount}人"
                 }

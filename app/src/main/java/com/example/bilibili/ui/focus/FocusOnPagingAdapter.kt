@@ -29,11 +29,9 @@ class FocusOnPagingAdapter(
 
         // 1. 设置基础信息
         binding.tvNickname.text = user.otherNickName
-        binding.tvDescription.text = if (!user.otherPersonalIntroduction.isNullOrBlank() && user.otherPersonalIntroduction != "null") {
+        binding.tvDescription.text = com.example.bilibili.util.UserInfoText.displayIntroduction(
             user.otherPersonalIntroduction
-        } else {
-            ""
-        }
+        )
         GlideEngine.loadUserAvatar(binding.root.context, user.otherAvatar, binding.ivAvatar)
 
         binding.root.setOnClickListener { onUserClick(user) }

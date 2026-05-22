@@ -142,6 +142,8 @@
         android:id="@+id/iv_captcha_code"
         android:layout_width="100dp"
         android:layout_height="60dp"
+        android:clickable="true"
+        android:focusable="true"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_placeholder_code"
         android:contentDescription="@string/verifyCode"

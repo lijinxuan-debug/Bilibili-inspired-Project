@@ -18,6 +18,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.text.InputFilter
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -43,6 +44,7 @@ import com.example.bilibili.ui.playVideo.intro.RecommendVideoItem
 import com.example.bilibili.ui.playVideo.intro.VideoIntroFragment
 import com.example.bilibili.util.GlideEngine
 import com.example.bilibili.util.ToastUtils
+import androidx.constraintlayout.widget.ConstraintLayout
 import com.example.bilibili.util.VideoDataUtils
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.tabs.TabLayout
@@ -99,6 +101,15 @@ class PlayVideoActivity : AppCompatActivity() {
 
     private var endRecommendItem: RecommendVideoItem? = null
 
+    /** 推荐跳转在同一 Activity 内切换视频，返回时恢复，避免叠层 Activity 争用 Surface */
+    private val videoBackStack = ArrayDeque<VideoPlaybackStackEntry>()
+
+    private data class VideoPlaybackStackEntry(
+        val videoId: String,
+        val positionMs: Long,
+        val wasOnEndScreen: Boolean,
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         savedInstanceState?.let {
@@ -145,10 +156,22 @@ class PlayVideoActivity : AppCompatActivity() {
             ToastUtils.showShort(this, "视频 ID 缺失")
         }
 
-        binding.ivStickyBack.setOnClickListener { finish() }
+        binding.ivStickyBack.setOnClickListener { handleBackNavigation() }
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    handleBackNavigation()
+                }
+            },
+        )
         setupStickyBackWithPlayerControls()
 
         initDanmuSwitch()
+
+        binding.videoPlayer.setAutoFullWithSize(true)
+        binding.videoPlayer.setRotateViewAuto(false)
+        binding.videoPlayer.setNeedOrientationUtils(false)
 
         // 全屏：仅窗口内放大，不旋转到横屏
         binding.videoPlayer.fullscreenButton.setOnClickListener {
@@ -183,12 +206,7 @@ class PlayVideoActivity : AppCompatActivity() {
 
         player.findViewById<View>(R.id.layout_end_recommend_card)?.setOnClickListener {
             val item = endRecommendItem ?: return@setOnClickListener
-            if (item.videoId.isBlank()) return@setOnClickListener
-            startActivity(
-                Intent(this, PlayVideoActivity::class.java).apply {
-                    putExtra("video_id", item.videoId)
-                }
-            )
+            openRecommendVideo(item.videoId)
         }
 
         player.findViewById<View>(R.id.btn_end_replay)?.setOnClickListener {
@@ -207,12 +225,18 @@ class PlayVideoActivity : AppCompatActivity() {
     private fun bindEndRecommendCard(item: RecommendVideoItem?) {
         val player = binding.videoPlayer
         val card = player.findViewById<View>(R.id.layout_end_recommend_card) ?: return
+        val recommendTitle = player.findViewById<View>(R.id.tv_end_recommend_title)
+        val replayBtn = player.findViewById<View>(R.id.btn_end_replay) ?: return
 
         if (item == null) {
+            recommendTitle?.visibility = View.GONE
             card.visibility = View.GONE
+            layoutEndReplayCentered(replayBtn, true)
             return
         }
+        recommendTitle?.visibility = View.VISIBLE
         card.visibility = View.VISIBLE
+        layoutEndReplayCentered(replayBtn, false)
 
         val titleView = player.findViewById<TextView>(R.id.tv_end_video_title)
         val uploaderView = player.findViewById<TextView>(R.id.tv_end_uploader)
@@ -247,13 +271,34 @@ class PlayVideoActivity : AppCompatActivity() {
         GlideEngine.loadVideoCover(this, item.videoCover, coverView)
     }
 
+    /** 无推荐时把重播居中；有推荐时重播在左下角 */
+    private fun layoutEndReplayCentered(replayBtn: View, centered: Boolean) {
+        val lp = replayBtn.layoutParams as? ConstraintLayout.LayoutParams ?: return
+        if (centered) {
+            lp.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            lp.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            lp.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            lp.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            lp.bottomMargin = 0
+            lp.topMargin = 0
+        } else {
+            lp.topToTop = ConstraintLayout.LayoutParams.UNSET
+            lp.endToEnd = ConstraintLayout.LayoutParams.UNSET
+            lp.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            lp.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            lp.bottomMargin = (16 * resources.displayMetrics.density).toInt()
+        }
+        replayBtn.layoutParams = lp
+    }
+
     private fun hidePlaybackEndScreen() {
         binding.videoPlayer.hideEndOverlay()
     }
 
     /** 不要覆盖 GSY 的 SeekBar 监听器；通过播放器回调统一处理预览 */
     private fun setupPreviewSeekListener() {
-        binding.videoPlayer.setOnPreviewSeekListener(object : DanmakuVideoPlayer.OnPreviewSeekListener {
+        binding.videoPlayer.setOnPreviewSeekListener(object :
+            DanmakuVideoPlayer.OnPreviewSeekListener {
             override fun onSeekStart() {
                 if (currentPreviewConfig != null) {
                     getPreviewLayout()?.visibility = View.VISIBLE
@@ -496,8 +541,12 @@ class PlayVideoActivity : AppCompatActivity() {
             currentVideoUrl = url
             currentVideoTitle = "视频播放"
             // 从后台回来 LiveData 会再回调一次，不能再次 initPlayer 否则从头播
-            if (sameUrl && binding.videoPlayer.currentPlayer != null) {
-                restorePlaybackIfNeeded()
+            if (sameUrl) {
+                if (binding.videoPlayer.currentPlayer != null) {
+                    restorePlaybackIfNeeded()
+                } else {
+                    reinitPlayerAtLastPosition(url)
+                }
                 return@observe
             }
             danmakuListReady = false
@@ -544,7 +593,7 @@ class PlayVideoActivity : AppCompatActivity() {
         Glide.with(this)
             .asBitmap()
             .load(url)
-            .into(object : CustomTarget<Bitmap>(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL) {
+            .into(object : CustomTarget<Bitmap>(SIZE_ORIGINAL, SIZE_ORIGINAL) {
                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
                     previewSpriteBitmap = resource
                 }
@@ -680,14 +729,12 @@ class PlayVideoActivity : AppCompatActivity() {
         schedulePlayCountUiRefresh()
     }
 
-    /**
-     * 初始化 GSYVideoPlayer
-     */
     private fun initPlayer(url: String, title: String, seekMs: Long = 0L) {
         hidePlaybackEndScreen()
         binding.videoPlayer.onVideoReset()
 
-        binding.videoPlayer.setUp(url, true, null)
+        // 关闭边播边缓存，避免缓存损坏导致卡顿、破音
+        binding.videoPlayer.setUp(url, false, null)
         binding.videoPlayer.setIsTouchWiget(true)
         binding.videoPlayer.setReleaseWhenLossAudio(false)
         binding.videoPlayer.backButton.visibility = View.GONE
@@ -695,14 +742,18 @@ class PlayVideoActivity : AppCompatActivity() {
         if (seekMs > 0) {
             binding.videoPlayer.setDanmakuStartSeekPosition(seekMs)
         }
-        binding.videoPlayer.post {
+        // 释放后需等 Surface 重建再开播，否则易出现 BufferQueue abandoned
+        binding.videoPlayer.postDelayed({
+            if (isFinishing || isDestroyed) return@postDelayed
             binding.videoPlayer.startPlayLogic()
             if (seekMs > 0) {
                 binding.videoPlayer.postDelayed({
-                    binding.videoPlayer.seekTo(seekMs)
+                    if (!isFinishing && !isDestroyed) {
+                        binding.videoPlayer.seekTo(seekMs)
+                    }
                 }, 300)
             }
-        }
+        }, 150)
     }
 
     private fun snapshotPlaybackState() {
@@ -718,12 +769,77 @@ class PlayVideoActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 从简介/结束页推荐切换视频：不新开 Activity，避免 GSY 与 Surface 被顶掉导致黑屏。
+     */
+    fun openRecommendVideo(videoId: String) {
+        if (videoId.isBlank() || videoId == currentVideoId) return
+        snapshotPlaybackState()
+        if (currentVideoId.isNotEmpty()) {
+            videoBackStack.addLast(
+                VideoPlaybackStackEntry(
+                    videoId = currentVideoId,
+                    positionMs = lastPlayPositionMs,
+                    wasOnEndScreen = binding.videoPlayer.isEndScreenShowing,
+                ),
+            )
+        }
+        switchToVideo(videoId, restorePositionMs = 0L)
+    }
+
+    private fun handleBackNavigation() {
+        if (popAndRestorePreviousVideo()) return
+        finish()
+    }
+
+    private fun popAndRestorePreviousVideo(): Boolean {
+        val entry = videoBackStack.removeLastOrNull() ?: return false
+        switchToVideo(entry.videoId, restorePositionMs = entry.positionMs)
+        return true
+    }
+
+    private fun switchToVideo(videoId: String, restorePositionMs: Long) {
+        lastPlayPositionMs = restorePositionMs
+        shouldRestorePlayback = false
+        currentVideoUrl = null
+        danmakuListReady = false
+        cachedDanmakuList = null
+        pendingPlayUrl = null
+        playCountRefreshJob?.cancel()
+        previewSpriteBitmap = null
+        releasePlayerBeforeSwitch()
+        viewModel.fetchAllData(videoId)
+    }
+
+    private fun releasePlayerBeforeSwitch() {
+        hidePlaybackEndScreen()
+        try {
+            binding.videoPlayer.onVideoPause()
+            binding.videoPlayer.currentPlayer?.release()
+            binding.videoPlayer.release()
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun reinitPlayerAtLastPosition(url: String) {
+        danmakuListReady = cachedDanmakuList != null
+        pendingPlayUrl = url
+        pendingPlaySeekMs = lastPlayPositionMs
+        tryStartPlayerWhenReady()
+    }
+
     private fun restorePlaybackIfNeeded() {
         if (!shouldRestorePlayback) return
         shouldRestorePlayback = false
+        val url = currentVideoUrl
         try {
             val player = binding.videoPlayer
+            if (!url.isNullOrEmpty() && player.currentPlayer == null) {
+                reinitPlayerAtLastPosition(url)
+                return
+            }
             if (player.currentPlayer == null) return
+            if (player.isEndScreenShowing) return
             player.onVideoResume()
             // 等 surface 恢复后再读当前进度；后台音频若一直在播，livePos 会大于 onStop 时保存的值
             player.post {
@@ -778,6 +894,7 @@ class PlayVideoActivity : AppCompatActivity() {
     override fun onDestroy() {
         playCountRefreshJob?.cancel()
         playCountRefreshJob = null
+        videoBackStack.clear()
         super.onDestroy()
         danmuExpandAnimator?.cancel()
 
@@ -786,6 +903,7 @@ class PlayVideoActivity : AppCompatActivity() {
         try {
             binding.videoPlayer.currentPlayer?.release()
             binding.videoPlayer.release()
+            releaseAllVideos()
         } catch (e: Exception) {
             // 忽略释放异常
         }

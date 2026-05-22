@@ -10,7 +10,7 @@
     <FrameLayout
         android:id="@+id/player_container"
         android:layout_width="match_parent"
-        android:layout_height="270dp"
+        android:layout_height="@dimen/player_container_height_landscape"
         android:background="#000000"
         app:layout_constraintTop_toTopOf="parent">
 

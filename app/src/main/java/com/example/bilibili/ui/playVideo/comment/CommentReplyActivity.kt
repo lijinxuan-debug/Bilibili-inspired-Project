@@ -18,6 +18,7 @@ import com.example.bilibili.databinding.ActivityCommentReplyBinding
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.SPUtils
 import com.example.bilibili.util.ToastUtils
+import com.example.bilibili.util.UserInfoText
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import org.json.JSONArray
 import org.json.JSONObject
@@ -224,7 +225,7 @@ class CommentReplyActivity : AppCompatActivity() {
             postTime = obj.optString("postTime"),
             likeCount = obj.optInt("likeCount"),
             hateCount = obj.optInt("hateCount"),
-            avatar = obj.optString("avatar"),
+            avatar = UserInfoText.normalize(obj.optString("avatar")),
             nickName = obj.optString("nickName"),
             replyAvatar = if (obj.has("replyAvatar") && !obj.isNull("replyAvatar")) obj.optString("replyAvatar") else null,
             replyNickName = if (obj.has("replyNickName") && !obj.isNull("replyNickName")) obj.optString("replyNickName") else null,
@@ -298,55 +299,28 @@ class CommentReplyActivity : AppCompatActivity() {
     }
 
     private fun handleLikeAction(commentItem: CommentItem) {
-        val currentUserId = SPUtils.getUserId()
-        if (currentUserId.isEmpty()) {
+        if (SPUtils.getUserId().isEmpty()) {
             ToastUtils.showShort(this, "请先登录")
             return
         }
-
-        // 乐观更新 UI
-        val oldIsLiked = commentItem.isLiked
-        commentItem.isLiked = !oldIsLiked
-
-        // 互斥：点赞后取消踩
-        if (commentItem.isLiked) {
-            commentItem.isHated = false
-        }
-
-        // 更新 UI
-        val position = comments.indexOf(commentItem)
-        if (position >= 0) {
-            adapter?.notifyItemChanged(position)
-        }
-
-        // 这里需要调用点赞接口
-        // 暂时只是模拟
+        CommentActionHelper.applyLikeToggle(commentItem)
+        notifyReplyItemChanged(commentItem)
     }
 
     private fun handleDislikeAction(commentItem: CommentItem) {
-        val currentUserId = SPUtils.getUserId()
-        if (currentUserId.isEmpty()) {
+        if (SPUtils.getUserId().isEmpty()) {
             ToastUtils.showShort(this, "请先登录")
             return
         }
+        CommentActionHelper.applyDislikeToggle(commentItem)
+        notifyReplyItemChanged(commentItem)
+    }
 
-        // 乐观更新 UI
-        val oldIsHated = commentItem.isHated
-        commentItem.isHated = !oldIsHated
-
-        // 互斥：踩后取消点赞
-        if (commentItem.isHated) {
-            commentItem.isLiked = false
-        }
-
-        // 更新 UI
-        val position = comments.indexOf(commentItem)
+    private fun notifyReplyItemChanged(commentItem: CommentItem) {
+        val position = comments.indexOfFirst { it.commentId == commentItem.commentId }
         if (position >= 0) {
             adapter?.notifyItemChanged(position)
         }
-
-        // 这里需要调用踩接口
-        // 暂时只是模拟
     }
 
     override fun onDestroy() {

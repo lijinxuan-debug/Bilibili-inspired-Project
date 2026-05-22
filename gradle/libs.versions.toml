@@ -25,6 +25,8 @@ gsyVideoPlayer = "13.0.0"
 danmaku = "0.9.25"
 danmaku-ndk = "0.9.21"
 gson = "2.10.1"
+room = "2.7.2"
+ksp = "2.0.21-1.0.28"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -64,8 +66,12 @@ gsyVideoPlayer-exo2 = { group = "io.github.carguo", name = "gsyvideoplayer-exo2"
 danmaku-main = { group = "com.github.ctiao", name = "DanmakuFlameMaster", version.ref = "danmaku" }
 danmaku-ndk = { group = "com.github.ctiao", name = "ndkbitmap-armv7a", version.ref = "danmaku-ndk" }
 google-gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

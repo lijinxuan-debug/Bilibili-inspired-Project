@@ -127,6 +127,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:background="@drawable/bg_comment_reply_card"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="@null"
         android:orientation="vertical"
         android:padding="8dp"
         android:visibility="gone"
@@ -177,15 +180,29 @@
             tools:listitem="@layout/item_video_comment_thread" />
 
         <!-- 收起按钮 -->
-        <TextView
+        <LinearLayout
             android:id="@+id/tv_collapse_replies"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="收起回复 ∨"
-            android:textColor="#9499A0"
-            android:textSize="12sp"
-            android:padding="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="收起回复"
+                android:textColor="#9499A0"
+                android:textSize="12sp" />
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="4dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_arrow_bottom"
+                app:tint="#9499A0" />
+        </LinearLayout>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

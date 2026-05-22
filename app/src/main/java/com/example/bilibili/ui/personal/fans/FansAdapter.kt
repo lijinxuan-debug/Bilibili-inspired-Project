@@ -31,11 +31,9 @@ class FansAdapter(
         binding.root.setOnClickListener { onUserClick(user) }
         binding.ivAvatar.setOnClickListener { onUserClick(user) }
         binding.tvNickname.text = user.otherNickName
-        binding.tvDescription.text = if (!user.otherPersonalIntroduction.isNullOrBlank() && user.otherPersonalIntroduction != "null") {
+        binding.tvDescription.text = com.example.bilibili.util.UserInfoText.displayIntroduction(
             user.otherPersonalIntroduction
-        } else {
-            ""
-        }
+        )
 
         // 2. 粉丝列表状态判断：根据focusType显示不同状态
         binding.btnFollowAction.apply {

@@ -12,9 +12,7 @@ import com.example.bilibili.ui.memberShip.MemberShipFragment
 import com.example.bilibili.ui.personal.PersonalFragment
 import com.example.bilibili.ui.releaseVideo.ReleaseVideoActivity
 import com.example.bilibili.util.GlideEngine
-import com.hjq.permissions.OnPermissionCallback
-import com.hjq.permissions.Permission
-import com.hjq.permissions.XXPermissions
+import com.example.bilibili.util.PermissionHelper
 import com.luck.picture.lib.basic.PictureSelector
 import com.luck.picture.lib.config.SelectMimeType
 import com.luck.picture.lib.config.SelectModeConfig
@@ -57,37 +55,7 @@ class MainActivity : AppCompatActivity() {
 
         // 监听添加按钮
         binding.fabAdd.setOnClickListener {
-            // 检查对应的视频权限依赖（包括相机权限）
-            XXPermissions.with(this)
-                .permission(Permission.READ_MEDIA_VIDEO)
-                .permission(Permission.READ_MEDIA_IMAGES)
-                .permission(Permission.CAMERA) // 添加相机权限
-                .request(object : OnPermissionCallback {
-                    override fun onGranted(permissions: MutableList<String>, allGranted: Boolean) {
-                        if (allGranted) {
-                            // 权限通过，进入第二步：打开相册
-                            startVideoPicker()
-                        }
-                    }
-
-                    override fun onDenied(
-                        permissions: MutableList<String>,
-                        doNotAskAgain: Boolean
-                    ) {
-                        // 权限被拒的处理逻辑
-                        if (doNotAskAgain) {
-                            // 用户勾选了"不再询问"，引导用户去设置页面
-                            XXPermissions.startPermissionActivity(this@MainActivity, permissions)
-                        } else {
-                            // 权限被拒绝，提示用户
-                            android.widget.Toast.makeText(
-                                this@MainActivity,
-                                "需要相机和媒体权限才能发布视频",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                })
+            PermissionHelper.requestPublishVideo(this) { startVideoPicker() }
         }
     }
 
@@ -131,21 +99,26 @@ class MainActivity : AppCompatActivity() {
     private fun switchFragment(tag: String) {
         val transaction = supportFragmentManager.beginTransaction()
 
-        // 移除所有已存在的Fragment
         supportFragmentManager.fragments.forEach { fragment ->
-            transaction.remove(fragment)
+            if (fragment.isAdded) {
+                transaction.hide(fragment)
+            }
         }
 
-        // 每次都创建新的Fragment实例，不使用持久化
-        val fragment = when (tag) {
-            TAG_HOME -> FrontPageFragment()
-            TAG_FOCUS -> FocusOnFragment()
-            TAG_SHOP -> MemberShipFragment()
-            TAG_MINE -> PersonalFragment()
-            else -> FrontPageFragment()
+        var target = supportFragmentManager.findFragmentByTag(tag)
+        if (target == null) {
+            target = when (tag) {
+                TAG_HOME -> FrontPageFragment()
+                TAG_FOCUS -> FocusOnFragment()
+                TAG_SHOP -> MemberShipFragment()
+                TAG_MINE -> PersonalFragment()
+                else -> FrontPageFragment()
+            }
+            transaction.add(R.id.nav_host_fragment, target, tag)
+        } else {
+            transaction.show(target)
         }
 
-        transaction.add(R.id.nav_host_fragment, fragment, tag)
         transaction.commit()
     }
 

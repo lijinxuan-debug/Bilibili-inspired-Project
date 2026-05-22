@@ -56,12 +56,20 @@
         android:layout_height="0.5dp"
         android:background="#F0F0F0" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_fans"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/white"
-        android:overScrollMode="never"
-        />
+        android:layout_height="match_parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_fans"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/white"
+            android:overScrollMode="never" />
+
+        <include
+            android:id="@+id/empty_state"
+            layout="@layout/layout_empty_state" />
+    </FrameLayout>
 
 </LinearLayout>

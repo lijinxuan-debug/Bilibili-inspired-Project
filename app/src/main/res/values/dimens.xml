@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <dimen name="player_container_height_landscape">270dp</dimen>
     <dimen name="personal_logout_margin_top">12dp</dimen>
     <dimen name="personal_logout_margin_end">12dp</dimen>
 </resources>

@@ -27,7 +27,9 @@ class FocusOnAdapter(
 
         // 1. 设置基础信息
         binding.tvNickname.text = user.otherNickName
-        binding.tvDescription.text = user.otherPersonalIntroduction ?: "暂无简介"
+        binding.tvDescription.text = com.example.bilibili.util.UserInfoText.displayIntroduction(
+            user.otherPersonalIntroduction
+        )
         GlideEngine.loadUserAvatar(binding.root.context, user.otherAvatar, binding.ivAvatar)
 
         // 2. 根据 focusType 设置按钮文字和样式

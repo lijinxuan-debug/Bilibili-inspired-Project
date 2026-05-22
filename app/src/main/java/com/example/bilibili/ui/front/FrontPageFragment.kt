@@ -11,9 +11,10 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
-import com.example.bilibili.data.api.CategoryInfoService
 import com.example.bilibili.data.api.VideoService
+import com.example.bilibili.data.local.AppDatabase
 import com.example.bilibili.data.model.CategoryItem
+import com.example.bilibili.data.repository.CategoryRepository
 import com.example.bilibili.databinding.FragmentFrontPageBinding
 import com.example.bilibili.ui.search.SearchActivity
 import com.example.bilibili.util.GlideEngine
@@ -32,11 +33,11 @@ class FrontPageFragment : Fragment() {
     private val binding get() = _binding!!
 
     private var hotWordsArray: Array<String> = arrayOf()
-    private val categoryService = RetrofitClient.create(CategoryInfoService::class.java)
     private val videoService = RetrofitClient.create(VideoService::class.java)
+    private lateinit var categoryRepository: CategoryRepository
 
-    // 存储分类列表
     private val categoryList = mutableListOf<CategoryItem>()
+    private var tabsInitialized = false
 
     override fun onCreateView(
         inflater: android.view.LayoutInflater,
@@ -49,6 +50,11 @@ class FrontPageFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        categoryRepository = CategoryRepository(
+            AppDatabase.getInstance(requireContext().applicationContext),
+            RetrofitClient.create(com.example.bilibili.data.api.CategoryInfoService::class.java),
+        )
 
         // 适配水滴屏和刘海屏
         ViewCompat.setOnApplyWindowInsetsListener(binding.appBarLayout) { _, insets ->
@@ -126,35 +132,33 @@ class FrontPageFragment : Fragment() {
                 // 记得在这里初始化你的 hotWordsArray
                 hotWordsArray = hotWords
 
-                withContext(Dispatchers.Main) {
-                    if (hotWordsArray.isNotEmpty()) {
-                        binding.hotWord.text = hotWordsArray[0]
-                    }
-                }
+                // 首页搜索条仅展示固定提示文案，不轮播热搜词
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        _binding?.let {
+            GlideEngine.loadUserAvatar(requireContext(), SPUtils.getAvatar(), it.ivAvatar)
+        }
+    }
+
     private fun loadTabsAndInitViewPager() {
-        lifecycleScope.launch(Dispatchers.Main) {
+        GlideEngine.loadUserAvatar(requireContext(), SPUtils.getAvatar(), binding.ivAvatar)
+        if (tabsInitialized) return
+
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // 加载个人头像
-                GlideEngine.loadUserAvatar(requireContext(), SPUtils.getAvatar(), binding.ivAvatar)
-
-                // 加载分类列表
-                val response = withContext(Dispatchers.IO) { categoryService.loadAllCategoryInfo() }
-                val categories = parseCategoryJson(response)
-
-                // 添加"全部"分类
+                val categories = withContext(Dispatchers.IO) {
+                    categoryRepository.loadCategories()
+                }
                 categoryList.clear()
-                categoryList.add(CategoryItem(-1, "全部"))
                 categoryList.addAll(categories)
-
-                // 初始化 ViewPager2
                 initViewPager()
-
+                tabsInitialized = true
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -187,22 +191,6 @@ class FrontPageFragment : Fragment() {
         override fun createFragment(position: Int): Fragment {
             return CategoryVideoFragment.newInstance(categories[position].categoryId)
         }
-    }
-
-    // 手动解析分类 JSON
-    private fun parseCategoryJson(json: String): List<CategoryItem> {
-        val list = mutableListOf<CategoryItem>()
-        val dataArray = JSONObject(json).getJSONArray("data")
-        for (i in 0 until dataArray.length()) {
-            val item = dataArray.getJSONObject(i)
-            list.add(
-                CategoryItem(
-                    categoryId = item.getInt("categoryId"),
-                    categoryName = item.getString("categoryName")
-                )
-            )
-        }
-        return list
     }
 
     override fun onDestroyView() {

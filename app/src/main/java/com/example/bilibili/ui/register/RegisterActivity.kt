@@ -94,7 +94,7 @@ class RegisterActivity : AppCompatActivity() {
                     // 对base64进行解码
                     val imageBytes = Base64.decode(base64Data, Base64.DEFAULT)
                     Glide.with(this@RegisterActivity).load(imageBytes).into(binding.ivCaptchaCode)
-
+                    binding.etCaptcha.text?.clear()
                 }
 
             } catch (e: Exception) {
@@ -205,6 +205,7 @@ class RegisterActivity : AppCompatActivity() {
                         val data = root.optJSONObject("data")
                         if (data != null) {
                             AuthSessionHelper.saveLoginData(data)
+                            AuthSessionHelper.syncProfileFromServer(data.getString("userId"))
                             AuthSessionHelper.navigateToMainAndFinish(this@RegisterActivity)
                         } else {
                             finish()

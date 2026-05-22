@@ -49,7 +49,7 @@ import master.flame.danmaku.ui.widget.DanmakuView;
  */
 public class DanmakuVideoPlayer extends StandardGSYVideoPlayer {
 
-    /** 与 GSY 默认进度刻度一致（0~100），避免拖动换算偏差 */
+    // 进度表的总刻度，这里和gsy播放器的总刻度一致
     private static final int SEEK_BAR_MAX = 100;
 
     /** 很多内核无法 seek 到 duration 本身，需略提前；拖到结尾也按此判断 */
@@ -247,6 +247,7 @@ public class DanmakuVideoPlayer extends StandardGSYVideoPlayer {
         return SEEK_BAR_MAX;
     }
 
+    // 调整到当前的播放进度
     private static int toSeekBarProgress(long positionMs, long durationMs) {
         if (durationMs <= 0) return 0;
         int p = (int) (positionMs * SEEK_BAR_MAX / durationMs);
@@ -994,14 +995,19 @@ public class DanmakuVideoPlayer extends StandardGSYVideoPlayer {
         mPreviewSeekListener.onSeekPreview(seekTimeMs, duration);
     }
 
+    /**
+     * 拖动进度条松手后
+     */
     @Override
     public void onSeekComplete() {
         super.onSeekComplete();
+        // 获取当前视频总时长
         long duration = getDuration();
         if (duration > 0 && mProgressBar != null) {
             long actualPos = getCurrentPositionWhenPlaying();
             mProgressBar.setProgress(toSeekBarProgress(actualPos, duration));
             if (mCurrentTimeTextView != null) {
+                // 刷新当前播放进度时间
                 mCurrentTimeTextView.setText(CommonUtil.stringForTime(actualPos));
             }
         }
@@ -1118,7 +1124,11 @@ public class DanmakuVideoPlayer extends StandardGSYVideoPlayer {
         }
     }
 
-    /** API mode(0滚动/1置顶/2置底) -> 烈焰/B站弹幕类型 */
+    /**
+     * 弹幕位置类型
+     * @param apiMode
+     * @return
+     */
     private static int apiModeToDanmakuType(int apiMode) {
         switch (apiMode) {
             case 1:
@@ -1221,7 +1231,7 @@ public class DanmakuVideoPlayer extends StandardGSYVideoPlayer {
                     }
                 }
             });
-            mDanmakuView.enableDanmakuDrawingCache(true);
+            mDanmakuView.enableDanmakuDrawingCache(false);
             if (mDumakuFile != null) {
                 mParser = createParser(getIsStream(mDumakuFile));
                 mDanmakuView.prepare(mParser, mDanmakuContext);
@@ -1423,6 +1433,7 @@ public class DanmakuVideoPlayer extends StandardGSYVideoPlayer {
         } catch (Exception e) {
             danmaku.textColor = Color.WHITE;
         }
+
         if (mDanmakuTimer != null) {
             danmaku.setTimer(mDanmakuTimer);
         } else if (mParser != null && mParser.getTimer() != null) {
@@ -1430,6 +1441,7 @@ public class DanmakuVideoPlayer extends StandardGSYVideoPlayer {
         } else {
             danmaku.setTimer(new DanmakuTimer(getCurrentPositionWhenPlaying()));
         }
+
         danmaku.flags = mDanmakuContext.mGlobalFlagValues;
         mDanmakuView.addDanmaku(danmaku);
     }
