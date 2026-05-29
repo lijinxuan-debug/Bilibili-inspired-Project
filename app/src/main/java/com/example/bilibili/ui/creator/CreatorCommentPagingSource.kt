@@ -34,8 +34,11 @@ class CreatorCommentPagingSource(
                         content = item.optString("content"),
                         videoId = item.optString("videoId"),
                         videoName = item.optString("videoName", "未知视频"),
+                        userId = item.optString("userId"),
                         nickName = item.optString("nickName", "用户"),
                         postTime = item.optString("postTime"),
+                        avatar = item.optString("avatar"),
+                        videoCover = item.optString("videoCover"),
                     ),
                 )
             }

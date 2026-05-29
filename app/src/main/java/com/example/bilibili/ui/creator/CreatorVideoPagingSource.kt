@@ -12,7 +12,7 @@ import com.example.bilibili.util.RetrofitClient
 import org.json.JSONObject
 
 class CreatorVideoPagingSource(
-    private val status: Int?,
+    private val searchKeyword: String?,
 ) : PagingSource<Int, CreatorVideoPost>() {
 
     private val service = RetrofitClient.create(UcenterService::class.java)
@@ -20,7 +20,14 @@ class CreatorVideoPagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CreatorVideoPost> {
         return try {
             val page = params.key ?: 1
-            val response = JSONObject(service.loadPostVideoList(status = status, pageNo = page))
+            val keyword = searchKeyword?.trim().takeIf { !it.isNullOrEmpty() }
+            val response = JSONObject(
+                service.loadPostVideoList(
+                    status = null,
+                    pageNo = page,
+                    videoNameFuzzy = keyword,
+                ),
+            )
             if (!response.isSuccess()) {
                 return LoadResult.Error(Exception(response.errorMessage()))
             }
@@ -38,6 +45,10 @@ class CreatorVideoPagingSource(
                         status = statusValue,
                         statusLabel = CreatorStatusText.videoStatusLabel(statusValue),
                         playCount = item.optInt("playCount"),
+                        likeCount = item.optInt("likeCount"),
+                        commentCount = item.optInt("commentCount"),
+                        danmuCount = item.optInt("danmuCount"),
+                        duration = item.optInt("duration"),
                         createTime = item.optString("createTime"),
                     ),
                 )

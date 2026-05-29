@@ -60,8 +60,8 @@ class TagBottomSheetDialogFragment : BottomSheetDialogFragment() {
         binding.tvConfirm.setOnClickListener {
             if (binding.viewPager.currentItem > 0) {
                 // 说明是在选择分区，那么点击确定就意味着选择了对应的分区数据
-                if (viewModel.selectedPartition.value == null) {
-                    ToastUtils.showShort(requireContext(),"请选择对应的分区")
+                if (!viewModel.hasPartitionSelected()) {
+                    ToastUtils.showShort(requireContext(), "请选择对应的分区")
                 } else {
                     // 返回到首页即可
                     switchToPage(0)

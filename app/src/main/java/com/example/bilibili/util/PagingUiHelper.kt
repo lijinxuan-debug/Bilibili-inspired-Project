@@ -37,9 +37,16 @@ object PagingUiHelper {
     fun setupListWithLoadStateFooter(
         recyclerView: RecyclerView,
         contentAdapter: PagingDataAdapter<*, *>,
-        onRetry: () -> Unit
+        onRetry: () -> Unit,
+        endMessage: String? = null,
+        showEndOnlyWhenHasItems: Boolean = false,
     ) {
-        val footerAdapter = LoadStateAdapter(onRetry)
+        val footerAdapter = LoadStateAdapter(
+            retry = onRetry,
+            endMessage = endMessage,
+            showEndOnlyWhenHasItems = showEndOnlyWhenHasItems,
+            itemCountProvider = { contentAdapter.itemCount },
+        )
         recyclerView.layoutManager = LinearLayoutManager(recyclerView.context)
         recyclerView.adapter = contentAdapter.withLoadStateFooter(footerAdapter)
     }

@@ -14,6 +14,7 @@
     <color name="bilibili_pink">#FB7299</color>
     <color name="splash_background">#FFFFFF</color>
     <color name="bili_text_grey">#999999</color>
+    <color name="bili_text_primary">#18191C</color>
     <color name="bili_divider">#F4F4F4</color>
     <color name="gray">#757575</color>
     <color name="sl_comment_item_color_default">#9499A0</color>

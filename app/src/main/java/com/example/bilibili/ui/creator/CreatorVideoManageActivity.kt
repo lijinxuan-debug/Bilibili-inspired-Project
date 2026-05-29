@@ -1,73 +1,62 @@
 package com.example.bilibili.ui.creator
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.bilibili.R
-import com.example.bilibili.databinding.ActivityCreatorListBinding
+import com.example.bilibili.databinding.ActivityCreatorVideoManageBinding
+import com.example.bilibili.ui.releaseVideo.ReleaseVideoActivity
+import com.example.bilibili.util.PagingUiHelper
 import com.example.bilibili.util.ToastUtils
-import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class CreatorVideoManageActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityCreatorListBinding
+    private lateinit var binding: ActivityCreatorVideoManageBinding
     private val viewModel: CreatorVideoManageViewModel by viewModels()
-    private val adapter = CreatorVideoPostAdapter { item ->
-        confirmDelete(item.videoId, item.videoName)
-    }
-
-    private val tabStatus = listOf(
-        null to R.string.creator_tab_all,
-        3 to R.string.creator_tab_pass,
-        -1 to R.string.creator_tab_process,
-        4 to R.string.creator_tab_fail,
+    private val adapter = CreatorVideoPostAdapter(
+        onEdit = { item -> openEditVideo(item.videoId) },
+        onDelete = { item -> confirmDelete(item.videoId, item.videoName) },
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityCreatorListBinding.inflate(layoutInflater)
+        binding = ActivityCreatorVideoManageBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.tvTitle.text = getString(R.string.creator_video_manage_title)
         binding.ivBack.setOnClickListener { finish() }
-        binding.tabLayout.isVisible = true
-        binding.spinnerVideo.isVisible = false
-
-        setupTabs()
+        setupSearch()
         setupList()
         observeVideos()
     }
 
-    private fun setupTabs() {
-        tabStatus.forEach { (_, titleRes) ->
-            binding.tabLayout.addTab(binding.tabLayout.newTab().setText(titleRes))
+    private fun setupSearch() {
+        binding.etSearch.doAfterTextChanged { text ->
+            viewModel.setSearchKeyword(text?.toString().orEmpty())
         }
-        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab) {
-                viewModel.setStatusFilter(tabStatus[tab.position].first)
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab?) = Unit
-            override fun onTabReselected(tab: TabLayout.Tab?) = Unit
-        })
     }
 
     private fun setupList() {
-        binding.rvList.layoutManager = LinearLayoutManager(this)
-        binding.rvList.adapter = adapter
+        PagingUiHelper.setupListWithLoadStateFooter(
+            recyclerView = binding.rvList,
+            contentAdapter = adapter,
+            onRetry = { adapter.retry() },
+            endMessage = getString(R.string.creator_list_end_hint),
+            showEndOnlyWhenHasItems = true,
+        )
         binding.swipeRefresh.setColorSchemeResources(R.color.bili_pink)
         binding.swipeRefresh.setOnRefreshListener { adapter.refresh() }
         adapter.addLoadStateListener { state ->
             binding.swipeRefresh.isRefreshing = state.refresh is LoadState.Loading
             binding.progress.isVisible = state.refresh is LoadState.Loading && adapter.itemCount == 0
-            binding.tvEmpty.isVisible = state.refresh is LoadState.NotLoading &&
-                adapter.itemCount == 0
+            binding.tvEmpty.isVisible = state.refresh is LoadState.NotLoading && adapter.itemCount == 0
         }
     }
 
@@ -75,6 +64,14 @@ class CreatorVideoManageActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.videos.collectLatest { adapter.submitData(it) }
         }
+    }
+
+    private fun openEditVideo(videoId: String) {
+        startActivity(
+            Intent(this, ReleaseVideoActivity::class.java).apply {
+                putExtra(ReleaseVideoActivity.EXTRA_VIDEO_ID, videoId)
+            },
+        )
     }
 
     private fun confirmDelete(videoId: String, title: String) {

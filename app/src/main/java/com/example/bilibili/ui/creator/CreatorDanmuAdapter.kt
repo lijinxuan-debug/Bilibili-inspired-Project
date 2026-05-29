@@ -5,15 +5,20 @@ import android.view.ViewGroup
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import com.example.bilibili.R
 import com.example.bilibili.data.model.CreatorDanmuItem
-import com.example.bilibili.databinding.ItemCreatorInteractionBinding
+import com.example.bilibili.databinding.ItemCreatorDanmuBinding
+import com.example.bilibili.util.GlideEngine
+import com.example.bilibili.util.UserInfoText
 
 class CreatorDanmuAdapter(
     private val onDelete: (CreatorDanmuItem) -> Unit,
+    private val onUserClick: (CreatorDanmuItem) -> Unit,
+    private val onVideoClick: (CreatorDanmuItem) -> Unit,
 ) : PagingDataAdapter<CreatorDanmuItem, CreatorDanmuAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val binding = ItemCreatorInteractionBinding.inflate(
+        val binding = ItemCreatorDanmuBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
             false,
@@ -25,15 +30,38 @@ class CreatorDanmuAdapter(
         val item = getItem(position) ?: return
         holder.bind(item)
         holder.binding.btnDelete.setOnClickListener { onDelete(item) }
+        holder.binding.ivAvatar.setOnClickListener { onUserClick(item) }
+        holder.binding.tvNickname.setOnClickListener { onUserClick(item) }
+        holder.binding.ivVideoCover.setOnClickListener { onVideoClick(item) }
     }
 
     class ViewHolder(
-        val binding: ItemCreatorInteractionBinding,
+        val binding: ItemCreatorDanmuBinding,
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: CreatorDanmuItem) {
+            binding.tvNickname.text = item.nickName
+            binding.tvTime.text = item.postTime
             binding.tvContent.text = item.text
-            binding.tvVideo.text = "来自：${item.videoName}"
-            binding.tvMeta.text = "${item.nickName} · ${item.postTime}"
+            binding.tvPlayTime.text = formatPlayTime(item.playTimeSec)
+            val avatarPath = UserInfoText.normalize(item.avatar)
+            if (avatarPath.isEmpty()) {
+                binding.ivAvatar.setImageResource(R.drawable.ic_avatar_default)
+            } else {
+                GlideEngine.loadUserAvatar(binding.root.context, avatarPath, binding.ivAvatar)
+            }
+            GlideEngine.loadVideoCover(
+                binding.root.context,
+                item.videoCover,
+                binding.ivVideoCover,
+                cornerRadius = 6,
+            )
+        }
+
+        private fun formatPlayTime(seconds: Int): String {
+            if (seconds <= 0) return "00:00"
+            val minutes = seconds / 60
+            val remain = seconds % 60
+            return "%02d:%02d".format(minutes, remain)
         }
     }
 

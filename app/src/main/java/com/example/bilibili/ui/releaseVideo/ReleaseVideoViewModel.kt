@@ -6,8 +6,12 @@ import android.os.Looper
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.example.bilibili.R
+import com.example.bilibili.data.api.CategoryInfoService
 import com.example.bilibili.data.api.FileService
 import com.example.bilibili.data.api.PostService
+import com.example.bilibili.data.api.UcenterService
+import com.example.bilibili.util.CategoryPartitionHelper
 import com.example.bilibili.data.model.CategoryInfo
 import com.example.bilibili.data.model.ReleaseVideoPart
 import com.example.bilibili.util.ApiResponseHelper
@@ -53,6 +57,14 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
     @Volatile
     private var postSubmitted = false
 
+    /** 编辑模式：非空时表示更新已有稿件 */
+    private var editingVideoId: String? = null
+
+    /** 稿件状态：0 转码中 2 待审核 3 通过 4 未通过 */
+    private var editingVideoStatus: Int? = null
+
+    val editLoadedLive = MutableLiveData(false)
+
     enum class StatementType {
         ORIGINAL,
         REPOST,
@@ -60,8 +72,20 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
 
     fun shouldRetainUploadsOnServer(): Boolean = isPosting || postSubmitted
 
+    fun isEditMode(): Boolean = !editingVideoId.isNullOrBlank()
+
+    fun getEditingVideoId(): String? = editingVideoId
+
     fun updatePartition(categoryInfo: CategoryInfo) {
         selectedPartition.value = categoryInfo
+    }
+
+    fun formatPartitionDisplay(info: CategoryInfo? = selectedPartition.value): String {
+        return CategoryPartitionHelper.displayName(info)
+    }
+
+    fun hasPartitionSelected(): Boolean {
+        return (selectedPartition.value?.categoryId ?: 0) > 0
     }
 
     fun addTag(name: String) {
@@ -98,6 +122,92 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
         videoCoverUrl.value = url
     }
 
+    fun loadVideoForEdit(videoId: String) {
+        editingVideoId = videoId
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val service = RetrofitClient.create(UcenterService::class.java)
+                val response = service.getVideoInfoByVideoId(videoId)
+                if (!ApiResponseHelper.isSuccess(response)) {
+                    postStatus.postValue("加载稿件失败: ${ApiResponseHelper.errorMessage(response)}")
+                    return@launch
+                }
+                val data = JSONObject(response).getJSONObject("data")
+                val videoInfo = data.getJSONObject("videoInfo")
+                val fileArray = data.optJSONArray("videoInfoFileList") ?: JSONArray()
+                editingVideoStatus = videoInfo.optInt("status", -1).takeIf { it >= 0 }
+
+                videoTitle.postValue(videoInfo.optString("videoName"))
+                videoCoverUrl.postValue(videoInfo.optString("videoCover"))
+                introduction.postValue(videoInfo.optString("introduction"))
+
+                val tagList = videoInfo.optString("tags")
+                    .split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .toMutableList()
+                selectedTags.postValue(tagList)
+
+                val postType = videoInfo.optInt("postType", 0)
+                statementType.postValue(
+                    if (postType == 1) StatementType.REPOST else StatementType.ORIGINAL,
+                )
+                repostSource.postValue(videoInfo.optString("originInfo"))
+
+                val pCategoryId = videoInfo.optInt("pCategoryId")
+                val categoryId = videoInfo.optInt("categoryId")
+                if (pCategoryId > 0) {
+                    val partition = try {
+                        val categoryService = RetrofitClient.create(CategoryInfoService::class.java)
+                        val treeResponse = categoryService.loadAllCategoryInfo()
+                        CategoryPartitionHelper.resolveFromIds(pCategoryId, categoryId, treeResponse)
+                    } catch (e: Exception) {
+                        Log.w("ReleaseVideo", "resolve partition names failed", e)
+                        null
+                    } ?: CategoryInfo(
+                        categoryId = pCategoryId,
+                        categoryName = "",
+                        subCategoryId = categoryId.takeIf { it > 0 },
+                    )
+                    selectedPartition.postValue(partition)
+                }
+
+                val parts = mutableListOf<ReleaseVideoPart>()
+                synchronized(partsLock) { uploadFinishedPartIds.clear() }
+                for (i in 0 until fileArray.length()) {
+                    val file = fileArray.getJSONObject(i)
+                    val uploadId = file.optString("uploadId")
+                    if (uploadId.isBlank()) continue
+                    val serverFileId = file.optString("fileId")
+                    val fileName = file.optString("fileName")
+                    val durationSec = file.optInt("duration", 0)
+                    val transferResult = file.optInt("transferResult", 1)
+                    val part = ReleaseVideoPart(
+                        filePath = "",
+                        fileName = fileName,
+                        duration = durationSec * 1000L,
+                        displayTitle = fileName,
+                        uploadId = uploadId,
+                        uploadStatus = uploadStatusForTransfer(transferResult),
+                        uploadProgress = 100,
+                        serverFileId = serverFileId,
+                        persistedFileSize = file.optLong("fileSize", 0L),
+                        transferResult = transferResult,
+                    )
+                    synchronized(partsLock) {
+                        uploadFinishedPartIds.add(part.id)
+                    }
+                    parts.add(part)
+                }
+                publishParts(parts, selectId = parts.firstOrNull()?.id)
+                editLoadedLive.postValue(true)
+            } catch (e: Exception) {
+                Log.e("ReleaseVideo", "loadVideoForEdit failed", e)
+                postStatus.postValue("加载稿件失败: ${e.message}")
+            }
+        }
+    }
+
     fun addPart(filePath: String, duration: Long): ReleaseVideoPart {
         val file = File(filePath)
         val part = ReleaseVideoPart(
@@ -118,7 +228,7 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
         synchronized(partsLock) {
             uploadFinishedPartIds.remove(partId)
         }
-        if (oldPart.uploadId.isNotEmpty() && !postSubmitted) {
+        if (!oldPart.isPersistedOnServer && oldPart.uploadId.isNotEmpty() && !postSubmitted) {
             deleteUpload(oldPart.uploadId)
         }
         val updated = ReleaseVideoPart(
@@ -127,6 +237,9 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
             fileName = file.name,
             duration = duration,
             displayTitle = file.nameWithoutExtension.ifBlank { file.name },
+            serverFileId = "",
+            persistedFileSize = 0L,
+            transferResult = -1,
         )
         val newList = currentParts().map { if (it.id == partId) updated else it }
         publishParts(newList, selectId = partId)
@@ -140,7 +253,7 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
         synchronized(partsLock) {
             uploadFinishedPartIds.remove(partId)
         }
-        if (removed.uploadId.isNotEmpty() && !postSubmitted) {
+        if (!removed.isPersistedOnServer && removed.uploadId.isNotEmpty() && !postSubmitted) {
             deleteUpload(removed.uploadId)
         }
         val newList = current.filter { it.id != partId }
@@ -188,8 +301,11 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
 
     private fun isPartUploadComplete(part: ReleaseVideoPart): Boolean {
         if (part.uploadId.isEmpty()) return false
+        if (part.transferResult == 2) return false
+        if (part.isPersistedOnServer && part.transferResult == 0) return false
         if (part.uploadStatus.contains("失败") || part.uploadStatus.contains("预上传失败")) return false
         if (part.uploadStatus.startsWith("正在")) return false
+        if (part.isPersistedOnServer && part.transferResult == 1) return true
         if (synchronized(partsLock) { uploadFinishedPartIds.contains(part.id) }) return true
         if (part.uploadStatus == "上传完成") return true
         return part.uploadProgress >= 100
@@ -213,6 +329,7 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
     fun publishBlockReason(): String {
         if (postSubmitted) return "视频已投稿"
         if (isPosting) return "正在投稿，请稍候"
+        validateBeforeSubmit(currentParts())?.let { return it }
         val parts = currentParts()
         if (parts.isEmpty()) return "请先添加分P视频"
         parts.firstOrNull { it.uploadStatus.contains("失败") || it.uploadStatus.contains("预上传失败") }
@@ -259,9 +376,13 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
 
     fun postVideo() {
         if (isPosting) return
-        val parts = videoParts.value.orEmpty()
-        val partition = selectedPartition.value
+        val parts = currentParts()
         val tags = selectedTags.value ?: mutableListOf()
+
+        validateBeforeSubmit(parts)?.let { reason ->
+            postStatus.value = reason
+            return
+        }
 
         if (parts.isEmpty()) {
             postStatus.postValue("请先添加分P视频")
@@ -271,7 +392,7 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
             postStatus.postValue("请等待所有分P上传完成")
             return
         }
-        if (partition == null) {
+        if (!hasPartitionSelected()) {
             postStatus.postValue("请选择分区")
             return
         }
@@ -287,6 +408,7 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
         isPosting = true
         canPublish.postValue(false)
 
+        val partition = selectedPartition.value!!
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val postService = RetrofitClient.create(PostService::class.java)
@@ -295,16 +417,10 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
                     if (!isPartUploadComplete(part)) {
                         throw IllegalStateException("分P「${part.displayTitle}」未完成上传")
                     }
-                    val fileJson = JSONObject().apply {
-                        put("uploadId", part.uploadId)
-                        put("fileName", part.fileName)
-                        put("fileSize", File(part.filePath).length())
-                        put("duration", (part.duration / 1000).toInt())
-                    }
-                    jsonArray.put(fileJson)
+                    jsonArray.put(buildUploadFileJson(part))
                 }
                 val response = postService.postVideo(
-                    videoId = null,
+                    videoId = editingVideoId,
                     videoCover = videoCoverUrl.value ?: "",
                     videoName = videoTitle.value ?: "",
                     pCategoryId = partition.categoryId,
@@ -317,7 +433,9 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
                 )
                 if (ApiResponseHelper.isSuccess(response)) {
                     postSubmitted = true
-                    postStatus.postValue("投稿成功")
+                    postStatus.postValue(
+                        if (editingVideoId != null) "保存成功" else "投稿成功",
+                    )
                 } else {
                     postStatus.postValue("投稿失败: ${ApiResponseHelper.errorMessage(response)}")
                 }
@@ -343,6 +461,11 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
 
     fun startUploadForPart(partId: String) {
         val part = currentParts().find { it.id == partId } ?: return
+        if (part.filePath.isBlank()) {
+            if (part.uploadId.isNotEmpty()) return
+            failPartUpload(partId, "未选择视频文件")
+            return
+        }
         synchronized(partsLock) {
             uploadFinishedPartIds.remove(partId)
         }
@@ -351,6 +474,10 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
             try {
                 val fileService = RetrofitClient.create(FileService::class.java)
                 val file = File(part.filePath)
+                if (!file.exists()) {
+                    failPartUpload(partId, "视频文件不存在")
+                    return@launch
+                }
                 val totalBytes = file.length().coerceAtLeast(1L)
                 val targetChunks = 12L
                 val minChunkSize = 256 * 1024L
@@ -528,5 +655,45 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
         val part = currentParts().find { it.id == partId } ?: return
         uploadProgress.postValue(part.uploadProgress)
         uploadStatus.postValue(part.uploadStatus)
+    }
+
+    private fun validateBeforeSubmit(parts: List<ReleaseVideoPart>): String? {
+        if (editingVideoId == null) return null
+        when (editingVideoStatus) {
+            0 -> return getApplication<Application>().getString(R.string.release_edit_transcoding)
+            2 -> return getApplication<Application>().getString(R.string.release_edit_pending_audit)
+        }
+        val app = getApplication<Application>()
+        parts.firstOrNull { it.transferResult == 2 }?.let { part ->
+            return app.getString(R.string.release_part_transfer_failed, part.shortFileName())
+        }
+        parts.firstOrNull { it.isPersistedOnServer && it.transferResult == 0 }?.let { part ->
+            return app.getString(R.string.release_part_transferring, part.shortFileName())
+        }
+        return null
+    }
+
+    private fun uploadStatusForTransfer(transferResult: Int): String = when (transferResult) {
+        0 -> "转码中"
+        2 -> "转码失败"
+        else -> "上传完成"
+    }
+
+    private fun buildUploadFileJson(part: ReleaseVideoPart): JSONObject {
+        val title = part.displayTitle.trim().ifBlank { part.fileName }
+        val fileSize = when {
+            part.filePath.isNotBlank() -> File(part.filePath).length()
+            part.persistedFileSize > 0 -> part.persistedFileSize
+            else -> 0L
+        }
+        return JSONObject().apply {
+            if (part.serverFileId.isNotBlank()) {
+                put("fileId", part.serverFileId)
+            }
+            put("uploadId", part.uploadId)
+            put("fileName", title)
+            put("fileSize", fileSize)
+            put("duration", (part.duration / 1000).toInt())
+        }
     }
 }

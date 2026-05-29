@@ -25,12 +25,19 @@ import org.json.JSONObject
 
 class CreatorInteractionManageViewModel : ViewModel() {
 
+    companion object {
+        private const val ALL_VIDEOS_LABEL = "全部视频"
+    }
+
     private val service = RetrofitClient.create(UcenterService::class.java)
 
     private val _videoOptions = MutableLiveData<List<CreatorVideoOption>>(emptyList())
     val videoOptions: LiveData<List<CreatorVideoOption>> = _videoOptions
 
     private val selectedVideoId = MutableStateFlow<String?>(null)
+
+    private val _selectedVideoOption = MutableLiveData<CreatorVideoOption>()
+    val selectedVideoOption: LiveData<CreatorVideoOption> = _selectedVideoOption
 
     val comments: Flow<PagingData<CreatorCommentItem>> = selectedVideoId.flatMapLatest { videoId ->
         Pager(
@@ -55,7 +62,7 @@ class CreatorInteractionManageViewModel : ViewModel() {
                         throw IllegalStateException(response.errorMessage())
                     }
                     val array = response.getJSONArray("data")
-                    val list = mutableListOf(CreatorVideoOption(null, "全部视频"))
+                    val list = mutableListOf(CreatorVideoOption(null, ALL_VIDEOS_LABEL))
                     for (i in 0 until array.length()) {
                         val item = array.getJSONObject(i)
                         list.add(
@@ -68,15 +75,30 @@ class CreatorInteractionManageViewModel : ViewModel() {
                     list
                 }
                 _videoOptions.value = options
+                if (_selectedVideoOption.value == null) {
+                    selectVideo(options.first())
+                } else if (_selectedVideoOption.value?.videoId != null) {
+                    val current = options.find { it.videoId == _selectedVideoOption.value?.videoId }
+                    if (current != null) {
+                        selectVideo(current)
+                    }
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _videoOptions.value = listOf(CreatorVideoOption(null, "全部视频"))
+                _videoOptions.value = listOf(CreatorVideoOption(null, ALL_VIDEOS_LABEL))
             }
         }
     }
 
+    fun selectVideo(option: CreatorVideoOption) {
+        selectedVideoId.value = option.videoId
+        _selectedVideoOption.value = option
+    }
+
     fun selectVideo(videoId: String?) {
-        selectedVideoId.value = videoId
+        val option = _videoOptions.value?.find { it.videoId == videoId }
+            ?: CreatorVideoOption(videoId, ALL_VIDEOS_LABEL)
+        selectVideo(option)
     }
 
     fun deleteComment(commentId: Int, onResult: (Boolean, String?) -> Unit) {

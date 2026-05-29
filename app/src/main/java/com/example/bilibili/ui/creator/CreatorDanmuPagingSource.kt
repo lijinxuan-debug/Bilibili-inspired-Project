@@ -8,6 +8,7 @@ import com.example.bilibili.util.ApiJson.errorMessage
 import com.example.bilibili.util.ApiJson.isSuccess
 import com.example.bilibili.util.PagingDefaults
 import com.example.bilibili.util.RetrofitClient
+import com.example.bilibili.util.UserAvatarCache
 import org.json.JSONObject
 
 class CreatorDanmuPagingSource(
@@ -34,15 +35,20 @@ class CreatorDanmuPagingSource(
                         text = item.optString("text"),
                         videoId = item.optString("videoId"),
                         videoName = item.optString("videoName", "未知视频"),
+                        userId = item.optString("userId"),
                         nickName = item.optString("nickName", "用户"),
                         postTime = item.optString("postTime"),
+                        avatar = item.optString("avatar"),
+                        videoCover = item.optString("videoCover"),
+                        playTimeSec = item.optInt("time", 0),
                     ),
                 )
             }
+            val enriched = UserAvatarCache.enrichDanmuItems(list)
             LoadResult.Page(
-                data = list,
+                data = enriched,
                 prevKey = if (page == 1) null else page - 1,
-                nextKey = PagingDefaults.nextPageKey(data, page, list.size),
+                nextKey = PagingDefaults.nextPageKey(data, page, enriched.size),
             )
         } catch (e: Exception) {
             LoadResult.Error(e)

@@ -42,7 +42,7 @@ class MainTagFragment : Fragment() {
 
         // 观察数据，更新 UI
         viewModel.selectedPartition.observe(viewLifecycleOwner) { category ->
-            binding.tvSelectedCategory.text = category.categoryName
+            binding.tvSelectedCategory.text = viewModel.formatPartitionDisplay(category)
         }
 
         // 渲染标签的逻辑（这里就是你之前写的 ChipGroup 渲染）

@@ -1,73 +1,202 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp"
-    android:background="@drawable/bg_creator_profile_card"
-    android:padding="12dp">
+    android:background="@color/white"
+    android:orientation="vertical"
+    android:paddingHorizontal="12dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="12dp">
 
-    <ImageView
-        android:id="@+id/iv_cover"
-        android:layout_width="120dp"
-        android:layout_height="68dp"
-        android:scaleType="centerCrop"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:src="@tools:sample/backgrounds/scenic" />
-
-    <TextView
-        android:id="@+id/tv_status"
-        android:layout_width="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/video"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_creator_stat_card"
-        android:paddingHorizontal="6dp"
-        android:paddingVertical="2dp"
-        android:textColor="@color/bili_pink"
-        android:textSize="11sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="审核通过" />
+        android:background="@null"
+        android:clickable="true"
+        android:focusable="false">
 
-    <TextView
-        android:id="@+id/tv_title"
-        android:layout_width="0dp"
+        <FrameLayout
+            android:id="@+id/fl_cover"
+            android:layout_width="128dp"
+            android:layout_height="72dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/iv_cover"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                tools:src="@tools:sample/backgrounds/scenic" />
+
+            <TextView
+                android:id="@+id/tv_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="4dp"
+                android:background="#99000000"
+                android:paddingHorizontal="4dp"
+                android:paddingVertical="1dp"
+                android:textColor="@color/white"
+                android:textSize="10sp"
+                tools:text="07:05" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="#18191C"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/tv_status_badge"
+            app:layout_constraintStart_toEndOf="@id/fl_cover"
+            app:layout_constraintTop_toTopOf="@id/fl_cover"
+            tools:text="【2024版】软件测试全套教程..." />
+
+        <TextView
+            android:id="@+id/tv_status_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textSize="12sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/tv_title"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tv_title"
+            tools:text="待审核"
+            tools:textColor="#FF8C00"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/tv_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="6dp"
+            android:textColor="#9499A0"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/fl_cover"
+            app:layout_constraintTop_toBottomOf="@id/tv_title"
+            tools:text="2024年1月31日 09:35" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:textColor="#212121"
-        android:textSize="14sp"
-        app:layout_constraintEnd_toStartOf="@id/tv_status"
-        app:layout_constraintStart_toEndOf="@id/iv_cover"
-        app:layout_constraintTop_toTopOf="@id/iv_cover"
-        tools:text="视频标题" />
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/tv_meta"
-        android:layout_width="0dp"
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_play_count"
+            app:tint="#9499A0" />
+
+        <TextView
+            android:id="@+id/tv_play_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:textColor="#9499A0"
+            android:textSize="12sp"
+            tools:text="897" />
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginStart="14dp"
+            android:src="@drawable/ic_like_outline"
+            app:tint="#9499A0" />
+
+        <TextView
+            android:id="@+id/tv_like_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:textColor="#9499A0"
+            android:textSize="12sp"
+            tools:text="10" />
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginStart="14dp"
+            android:src="@drawable/ic_comment_count"
+            app:tint="#9499A0" />
+
+        <TextView
+            android:id="@+id/tv_comment_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:textColor="#9499A0"
+            android:textSize="12sp"
+            tools:text="-" />
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginStart="14dp"
+            android:src="@drawable/ic_danmu_scroll"
+            app:tint="#9499A0" />
+
+        <TextView
+            android:id="@+id/tv_danmu_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:textColor="#9499A0"
+            android:textSize="12sp"
+            tools:text="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:layout_marginTop="6dp"
-        android:textColor="@color/bili_text_grey"
-        android:textSize="12sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/iv_cover"
-        app:layout_constraintTop_toBottomOf="@id/tv_title"
-        tools:text="播放 202 · 2026-05-22" />
+        android:layout_marginTop="10dp"
+        android:gravity="end"
+        android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/btn_delete"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:paddingHorizontal="4dp"
-        android:paddingVertical="4dp"
-        android:text="@string/creator_delete"
-        android:textColor="@color/bili_pink"
-        android:textSize="13sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_meta" />
+        <TextView
+            android:id="@+id/btn_edit"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:background="@drawable/bg_creator_manage_action_btn"
+            android:gravity="center"
+            android:minWidth="64dp"
+            android:paddingHorizontal="14dp"
+            android:text="@string/creator_edit"
+            android:textColor="#61666D"
+            android:textSize="13sp" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <TextView
+            android:id="@+id/btn_delete"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_creator_manage_action_btn"
+            android:gravity="center"
+            android:minWidth="64dp"
+            android:paddingHorizontal="14dp"
+            android:text="@string/creator_delete"
+            android:textColor="#61666D"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginTop="12dp"
+        android:background="#F1F2F3" />
+
+</LinearLayout>

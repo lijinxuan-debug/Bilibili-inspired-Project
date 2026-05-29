@@ -1,0 +1,4 @@
+<!-- 替换 selectList 中 query.queryVideoInfo 的扩展列 -->
+        <if test="query.queryVideoInfo">
+            ,vd.video_name videoName,vd.video_cover videoCover,u.nick_name nickName,u.avatar avatar
+        </if>

@@ -12,6 +12,7 @@ import com.example.bilibili.data.api.VideoService
 import com.example.bilibili.data.model.CommentDataContainer
 import com.example.bilibili.data.model.CommentItem
 import com.example.bilibili.data.model.DanmuEntity
+import com.example.bilibili.data.model.PlayVideoPartItem
 import com.example.bilibili.data.model.PreviewConfigEntity
 import com.example.bilibili.ui.playVideo.intro.RecommendVideoItem
 import com.example.bilibili.util.RetrofitClient
@@ -53,6 +54,12 @@ class PlayVideoViewModel : ViewModel() {
     val errorLive = MutableLiveData<String>()
     // 文件视频ID
     val fileIdLive = MutableLiveData<String>()
+
+    /** 分集列表（简介区横向卡片） */
+    val videoPartListLive = MutableLiveData<List<PlayVideoPartItem>>(emptyList())
+
+    /** 当前播放的分集 fileId */
+    val currentPartFileIdLive = MutableLiveData<String?>()
 
     // 弹幕常见颜色
     val danmuColors = listOf(
@@ -136,13 +143,12 @@ class PlayVideoViewModel : ViewModel() {
         if (videoId.isBlank()) return null
         return try {
             val response = videoService.loadVideoPList(videoId)
-            val dataArray = JSONObject(response).optJSONArray("data") ?: return null
+            val parts = parseVideoParts(response)
             var totalSeconds = 0
             var hasDuration = false
-            for (i in 0 until dataArray.length()) {
-                val seconds = dataArray.getJSONObject(i).optInt("duration", 0)
-                if (seconds > 0) {
-                    totalSeconds += seconds
+            parts.forEach { part ->
+                if (part.duration > 0) {
+                    totalSeconds += part.duration
                     hasDuration = true
                 }
             }
@@ -151,6 +157,55 @@ class PlayVideoViewModel : ViewModel() {
             e.printStackTrace()
             null
         }
+    }
+
+    /**
+     * 选择播放的分片
+     */
+    fun selectVideoPart(part: PlayVideoPartItem, videoId: String) {
+        if (part.fileId.isBlank() || part.fileId == currentPartFileIdLive.value) return
+        currentPartFileIdLive.postValue(part.fileId)
+        fileIdLive.postValue(part.fileId)
+        videoUrlLive.postValue(buildVideoUrl(part.fileId))
+        loadDanmuForPart(part.fileId, videoId)
+    }
+
+    private fun buildVideoUrl(fileId: String): String {
+        return "${RetrofitClient.BASE_URL}file/videoResource/$fileId/index.m3u8"
+    }
+
+    private fun loadDanmuForPart(fileId: String, videoId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val danmuRes = danmuService.loadDanmu(fileId, videoId)
+                danmuListLive.postValue(parseDanmuList(danmuRes))
+            } catch (e: Exception) {
+                e.printStackTrace()
+                danmuListLive.postValue(emptyList())
+            }
+        }
+    }
+
+    /**
+     * 解析分p
+     */
+    private fun parseVideoParts(pListRes: String): List<PlayVideoPartItem> {
+        val list = mutableListOf<PlayVideoPartItem>()
+        val dataArray = JSONObject(pListRes).optJSONArray("data") ?: return list
+        for (i in 0 until dataArray.length()) {
+            val item = dataArray.getJSONObject(i)
+            val fileId = item.optString("fileId")
+            if (fileId.isBlank()) continue
+            list.add(
+                PlayVideoPartItem(
+                    fileId = fileId,
+                    fileName = item.optString("fileName"),
+                    fileIndex = item.optInt("fileIndex", i + 1),
+                    duration = item.optInt("duration", 0),
+                ),
+            )
+        }
+        return list
     }
 
     /**
@@ -249,25 +304,14 @@ class PlayVideoViewModel : ViewModel() {
                         },
                     )
 
-                    // 解析播放地址
-                    val dataArray = JSONObject(pListRes).getJSONArray("data")
-                    if (dataArray.length() > 0) {
-                        val fileId = dataArray.getJSONObject(0).optString("fileId")
-                        fileIdLive.postValue(fileId)
-                        videoUrlLive.postValue(
-                            "${RetrofitClient.BASE_URL}file/videoResource/$fileId/index.m3u8"
-                        )
-                        // 解析弹幕信息
-                        launch(Dispatchers.IO) {
-                            try {
-                                val danmuRes = danmuService.loadDanmu(fileId, videoId)
-                                val danmuList = parseDanmuList(danmuRes)
-                                danmuListLive.postValue(danmuList)
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                danmuListLive.postValue(emptyList())
-                            }
-                        }
+                    val parts = parseVideoParts(pListRes)
+                    videoPartListLive.postValue(parts)
+                    if (parts.isNotEmpty()) {
+                        val first = parts.first()
+                        currentPartFileIdLive.postValue(first.fileId)
+                        fileIdLive.postValue(first.fileId)
+                        videoUrlLive.postValue(buildVideoUrl(first.fileId))
+                        loadDanmuForPart(first.fileId, videoId)
                     }
                 }
             } catch (e: Exception) {

@@ -54,6 +54,11 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class ReleaseVideoActivity : AppCompatActivity() {
+
+    companion object {
+        const val EXTRA_VIDEO_ID = "video_id"
+    }
+
     private lateinit var binding: ActivityReleaseVideoBinding
 
     private val viewModel: ReleaseVideoViewModel by viewModels()
@@ -97,6 +102,11 @@ class ReleaseVideoActivity : AppCompatActivity() {
 
         setupVideoPartsList()
 
+        val editVideoId = intent.getStringExtra(EXTRA_VIDEO_ID)
+        if (!editVideoId.isNullOrBlank()) {
+            applyEditModeUi()
+            viewModel.loadVideoForEdit(editVideoId)
+        }
         val videoPath = intent.getStringExtra("video_path")
         val videoDuration = intent.getLongExtra("video_duration", 0)
         if (videoPath != null && videoDuration > 0) {
@@ -194,10 +204,9 @@ class ReleaseVideoActivity : AppCompatActivity() {
         // 监听投稿状态
         viewModel.postStatus.observe(this) { status ->
             when (status) {
-                "投稿成功" -> {
-                    // 投稿成功，显示成功提示并返回
-                    ToastUtils.showShort(this, "投稿成功")
-                    Log.d("ReleaseVideo", "投稿成功")
+                "投稿成功", "保存成功" -> {
+                    ToastUtils.showShort(this, status)
+                    Log.d("ReleaseVideo", status)
                     finish()
                 }
                 "" -> {
@@ -213,7 +222,8 @@ class ReleaseVideoActivity : AppCompatActivity() {
 
         // 监听选择的分区
         viewModel.selectedPartition.observe(this) { item ->
-            binding.partition.text = item?.categoryName
+            val label = viewModel.formatPartitionDisplay(item)
+            binding.partition.text = label.ifBlank { getString(R.string.release_partition_hint) }
         }
 
         // 监听创作声明类型变化
@@ -223,6 +233,18 @@ class ReleaseVideoActivity : AppCompatActivity() {
                 ReleaseVideoViewModel.StatementType.REPOST -> "视频转载"
             }
             binding.reprintOrMakeYourOwn.text = text
+        }
+
+        viewModel.editLoadedLive.observe(this) { loaded ->
+            if (loaded != true) return@observe
+            applyEditModeUi()
+            binding.etTitle.setText(viewModel.videoTitle.value.orEmpty())
+            binding.titleLength.text = "${binding.etTitle.text.length}/80"
+            val cover = viewModel.videoCoverUrl.value
+            if (!cover.isNullOrBlank() && cover != "default_cover.jpg") {
+                hasCustomCover = true
+                GlideEngine.loadVideoCover(this, cover, binding.ivVideoCover)
+            }
         }
 
         // 监听输入的标签
@@ -621,9 +643,27 @@ class ReleaseVideoActivity : AppCompatActivity() {
         updatePublishButtonVisual()
     }
 
+    private fun applyEditModeUi() {
+        val editing = viewModel.isEditMode()
+        binding.tvToolbarTitle.setText(
+            if (editing) R.string.release_title_edit else R.string.release_title_publish,
+        )
+        binding.btnPublish.setText(
+            if (editing) R.string.release_btn_save else R.string.publish,
+        )
+    }
+
     private fun requestExitPage() {
         if (viewModel.shouldRetainUploadsOnServer()) {
             finish()
+            return
+        }
+        if (viewModel.isEditMode()) {
+            AlertDialog.Builder(this, R.style.PinkDialogTheme)
+                .setMessage(R.string.release_exit_edit_confirm)
+                .setPositiveButton(R.string.confirm) { _, _ -> finish() }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
             return
         }
         val hasUploads = viewModel.videoParts.value.orEmpty().any { it.uploadId.isNotEmpty() }

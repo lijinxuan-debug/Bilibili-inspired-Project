@@ -14,7 +14,9 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.bilibili.R
+import com.example.bilibili.data.model.PlayVideoPartItem
 import com.example.bilibili.databinding.FragmentVideoIntroBinding
 import com.example.bilibili.ui.playVideo.PlayVideoViewModel
 import com.example.bilibili.ui.user.UserProfileActivity
@@ -26,6 +28,7 @@ import com.example.bilibili.util.SPUtils
 import com.example.bilibili.data.api.VideoService
 import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.lifecycleScope
+import com.example.bilibili.ui.playVideo.PlayVideoActivity
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -41,6 +44,8 @@ class VideoIntroFragment : Fragment() {
 
     // 推荐视频适配器
     private var recommendAdapter: RecommendVideoAdapter? = null
+    private var partCardAdapter: PlayVideoPartCardAdapter? = null
+    private var currentVideoId: String = ""
 
     // 在线观看人数轮询相关
     private val onlineHandler = Handler(Looper.getMainLooper())
@@ -55,10 +60,12 @@ class VideoIntroFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initRecommendList()
+        initVideoPartList()
         initExpandLogic()
 
         // 1. 监听视频主数据 (标题、点赞数、时间等)
         sharedViewModel.videoDetailLive.observe(viewLifecycleOwner) { videoInfo ->
+            currentVideoId = videoInfo.optString("videoId")
             renderVideoInfo(videoInfo)
         }
 
@@ -95,6 +102,13 @@ class VideoIntroFragment : Fragment() {
             recommendAdapter?.submitList(list)
         }
 
+        sharedViewModel.videoPartListLive.observe(viewLifecycleOwner) { parts ->
+            renderVideoParts(parts)
+        }
+
+        sharedViewModel.currentPartFileIdLive.observe(viewLifecycleOwner) { fileId ->
+            partCardAdapter?.selectedFileId = fileId
+        }
     }
 
     /**
@@ -290,9 +304,46 @@ class VideoIntroFragment : Fragment() {
         }
     }
 
+    private fun initVideoPartList() {
+        partCardAdapter = PlayVideoPartCardAdapter { part ->
+            if (currentVideoId.isNotEmpty()) {
+                sharedViewModel.selectVideoPart(part, currentVideoId)
+            }
+        }
+        binding.rvVideoParts.apply {
+            layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
+            adapter = partCardAdapter
+            isNestedScrollingEnabled = false
+        }
+        binding.ivPartsMore.setOnClickListener {
+            val rv = binding.rvVideoParts
+            val scrollPx = (rv.width * 0.7f).toInt().coerceAtLeast(100)
+            rv.smoothScrollBy(scrollPx, 0)
+        }
+    }
+
+    /**
+     * 给予分p
+     */
+    private fun renderVideoParts(parts: List<PlayVideoPartItem>) {
+        // 只有一个分p的话就不需要显示了
+        if (parts.size <= 1) {
+            binding.layoutVideoParts.visibility = View.GONE
+            return
+        }
+        binding.layoutVideoParts.visibility = View.VISIBLE
+        partCardAdapter?.submitList(parts, sharedViewModel.currentPartFileIdLive.value)
+        val selectedIndex = parts.indexOfFirst {
+            it.fileId == sharedViewModel.currentPartFileIdLive.value
+        }.coerceAtLeast(0)
+        binding.rvVideoParts.post {
+            binding.rvVideoParts.scrollToPosition(selectedIndex)
+        }
+    }
+
     private fun initRecommendList() {
         recommendAdapter = RecommendVideoAdapter { recommendItem ->
-            (activity as? com.example.bilibili.ui.playVideo.PlayVideoActivity)
+            (activity as? PlayVideoActivity)
                 ?.openRecommendVideo(recommendItem.videoId)
         }
         binding.rvRecommend.layoutManager = LinearLayoutManager(context)

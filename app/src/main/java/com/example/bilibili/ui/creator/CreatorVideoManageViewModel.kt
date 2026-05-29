@@ -13,6 +13,7 @@ import com.example.bilibili.util.PagingDefaults
 import com.example.bilibili.util.RetrofitClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -20,17 +21,20 @@ import org.json.JSONObject
 class CreatorVideoManageViewModel : ViewModel() {
 
     private val service = RetrofitClient.create(UcenterService::class.java)
-    private val statusFilter = MutableStateFlow<Int?>(null)
+    private val searchKeyword = MutableStateFlow("")
 
-    val videos: Flow<PagingData<CreatorVideoPost>> = statusFilter.flatMapLatest { status ->
-        Pager(
-            config = PagingDefaults.videoListConfig(),
-            pagingSourceFactory = { CreatorVideoPagingSource(status) },
-        ).flow
-    }.cachedIn(viewModelScope)
+    val videos: Flow<PagingData<CreatorVideoPost>> = searchKeyword
+        .debounce(350)
+        .flatMapLatest { keyword ->
+            Pager(
+                config = PagingDefaults.videoListConfig(),
+                pagingSourceFactory = { CreatorVideoPagingSource(keyword) },
+            ).flow
+        }
+        .cachedIn(viewModelScope)
 
-    fun setStatusFilter(status: Int?) {
-        statusFilter.value = status
+    fun setSearchKeyword(keyword: String) {
+        searchKeyword.value = keyword
     }
 
     fun deleteVideo(videoId: String, onResult: (Boolean, String?) -> Unit) {

@@ -6,14 +6,17 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bilibili.data.model.CreatorCommentItem
-import com.example.bilibili.databinding.ItemCreatorInteractionBinding
+import com.example.bilibili.databinding.ItemCreatorCommentBinding
+import com.example.bilibili.util.GlideEngine
 
 class CreatorCommentAdapter(
     private val onDelete: (CreatorCommentItem) -> Unit,
+    private val onUserClick: (CreatorCommentItem) -> Unit,
+    private val onVideoClick: (CreatorCommentItem) -> Unit,
 ) : PagingDataAdapter<CreatorCommentItem, CreatorCommentAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val binding = ItemCreatorInteractionBinding.inflate(
+        val binding = ItemCreatorCommentBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
             false,
@@ -25,15 +28,25 @@ class CreatorCommentAdapter(
         val item = getItem(position) ?: return
         holder.bind(item)
         holder.binding.btnDelete.setOnClickListener { onDelete(item) }
+        holder.binding.ivAvatar.setOnClickListener { onUserClick(item) }
+        holder.binding.tvNickname.setOnClickListener { onUserClick(item) }
+        holder.binding.ivVideoCover.setOnClickListener { onVideoClick(item) }
     }
 
     class ViewHolder(
-        val binding: ItemCreatorInteractionBinding,
+        val binding: ItemCreatorCommentBinding,
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: CreatorCommentItem) {
+            binding.tvNickname.text = item.nickName
+            binding.tvTime.text = item.postTime
             binding.tvContent.text = item.content
-            binding.tvVideo.text = "来自：${item.videoName}"
-            binding.tvMeta.text = "${item.nickName} · ${item.postTime}"
+            GlideEngine.loadUserAvatar(binding.root.context, item.avatar, binding.ivAvatar)
+            GlideEngine.loadVideoCover(
+                binding.root.context,
+                item.videoCover,
+                binding.ivVideoCover,
+                cornerRadius = 6,
+            )
         }
     }
 

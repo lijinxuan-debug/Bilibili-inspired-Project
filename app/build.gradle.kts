@@ -85,5 +85,6 @@ dependencies {
     implementation(libs.google.gson)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.lottie.android)
     ksp(libs.androidx.room.compiler)
 }
