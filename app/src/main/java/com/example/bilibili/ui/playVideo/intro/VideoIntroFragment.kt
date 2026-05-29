@@ -23,6 +23,7 @@ import com.example.bilibili.ui.user.UserProfileActivity
 import com.example.bilibili.util.DeviceIdHelper
 import com.example.bilibili.util.FollowActionButtonUi
 import com.example.bilibili.util.GlideEngine
+import com.example.bilibili.util.fixHorizontalScrollConflictWithParent
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.SPUtils
 import com.example.bilibili.data.api.VideoService
@@ -314,6 +315,7 @@ class VideoIntroFragment : Fragment() {
             layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
             adapter = partCardAdapter
             isNestedScrollingEnabled = false
+            fixHorizontalScrollConflictWithParent()
         }
         binding.ivPartsMore.setOnClickListener {
             val rv = binding.rvVideoParts

@@ -43,6 +43,37 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
     // 展开的评论ID集合
     private val expandedCommentIds = mutableSetOf<Int>()
 
+    private var highlightedCommentId: Int? = null
+
+    fun setHighlightedCommentId(commentId: Int?) {
+        highlightedCommentId = commentId
+        notifyDataSetChanged()
+    }
+
+    fun expandComment(commentId: Int) {
+        expandedCommentIds.add(commentId)
+        refreshComment(commentId)
+    }
+
+    fun collapseComment(commentId: Int) {
+        expandedCommentIds.remove(commentId)
+        refreshComment(commentId)
+    }
+
+    private fun refreshComment(commentId: Int) {
+        val position = differ.currentList.indexOfFirst { it.commentId == commentId }
+        if (position >= 0) {
+            notifyItemChanged(position)
+        }
+    }
+
+    fun scrollToComment(recyclerView: RecyclerView, commentId: Int) {
+        val position = differ.currentList.indexOfFirst { it.commentId == commentId }
+        if (position >= 0) {
+            recyclerView.smoothScrollToPosition(position)
+        }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CommentViewHolder {
         val binding = ItemVideoCommentBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -82,6 +113,11 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
             disableRipple(binding.root)
             disableRipple(binding.llReplyPreview)
             disableRipple(binding.tvCollapseReplies)
+
+            val highlightParentOnly = item.commentId == highlightedCommentId
+            binding.root.setBackgroundResource(
+                if (highlightParentOnly) R.drawable.bg_comment_anchor_highlight else android.R.color.white,
+            )
 
             // 1. 基础信息绑定
             binding.tvUserName.text = item.nickName
@@ -192,8 +228,13 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
                 return
             }
 
-            // 仅 1 条回复：直接展示完整子评论，不用灰色摘要框
-            if (children.size == 1) {
+            val anchorToParent = item.commentId == highlightedCommentId
+            val anchorToChild = highlightedCommentId != null &&
+                item.children.orEmpty().any { it.commentId == highlightedCommentId }
+            val forceCollapsedForAnchor = anchorToParent
+
+            // 仅 1 条回复：默认展开；定位主评论时收起；定位子评论时需展开以显示高亮
+            if (children.size == 1 && !forceCollapsedForAnchor && !anchorToChild) {
                 binding.llReplyPreview.visibility = View.GONE
                 binding.llExpandedReplies.visibility = View.VISIBLE
                 binding.tvCollapseReplies.visibility = View.GONE
@@ -201,7 +242,8 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
                 return
             }
 
-            val isExpanded = expandedCommentIds.contains(item.commentId)
+            val isExpanded = anchorToChild ||
+                (!forceCollapsedForAnchor && expandedCommentIds.contains(item.commentId))
             if (isExpanded) {
                 binding.llReplyPreview.visibility = View.GONE
                 binding.llExpandedReplies.visibility = View.VISIBLE
@@ -238,10 +280,19 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.CommentViewHolder>() 
                     onImageClick = { imagePath -> onImageClick?.invoke(imagePath) },
                 )
             }
-            (binding.rvChildReplies.adapter as CommentThreadAdapter).submitList(
-                children,
-                isOriginalComment = false,
-            )
+            val threadAdapter = binding.rvChildReplies.adapter as CommentThreadAdapter
+            threadAdapter.setHighlightedCommentId(highlightedCommentId)
+            threadAdapter.submitList(children, isOriginalComment = false)
+            scrollToHighlightedChildIfNeeded(children)
+        }
+
+        private fun scrollToHighlightedChildIfNeeded(children: List<CommentItem>) {
+            val targetId = highlightedCommentId ?: return
+            val childIndex = children.indexOfFirst { it.commentId == targetId }
+            if (childIndex < 0) return
+            binding.rvChildReplies.post {
+                binding.rvChildReplies.smoothScrollToPosition(childIndex)
+            }
         }
 
         private fun disableRipple(view: View) {

@@ -10,30 +10,19 @@
     android:paddingEnd="16dp"
     android:paddingBottom="16dp">
 
-    <FrameLayout
-        android:id="@+id/layout_avatar"
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/iv_avatar"
         android:layout_width="40dp"
         android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:contentDescription="@null"
+        android:focusable="true"
+        android:scaleType="centerCrop"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/iv_avatar"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            app:shapeAppearanceOverlay="@style/CircleImage"
-            tools:src="@tools:sample/avatars" />
-
-        <ImageView
-            android:id="@+id/iv_type_badge"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_gravity="bottom|end"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_message_quick_like"
-            tools:ignore="ContentDescription" />
-    </FrameLayout>
+        app:layout_constraintTop_toTopOf="parent"
+        app:shapeAppearanceOverlay="@style/CircleImage"
+        tools:src="@tools:sample/avatars" />
 
     <FrameLayout
         android:id="@+id/layout_preview_group"
@@ -75,9 +64,9 @@
         android:textSize="15sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toStartOf="@id/layout_preview_group"
-        app:layout_constraintStart_toEndOf="@id/layout_avatar"
-        app:layout_constraintTop_toTopOf="@id/layout_avatar"
-        tools:text="Victor_Alex 、 摸鱼划水 、 碎碎念 等" />
+        app:layout_constraintStart_toEndOf="@id/iv_avatar"
+        app:layout_constraintTop_toTopOf="@id/iv_avatar"
+        tools:text="Victor_Alex" />
 
     <TextView
         android:id="@+id/tv_summary"
@@ -89,9 +78,9 @@
         android:textColor="#999999"
         android:textSize="14sp"
         app:layout_constraintEnd_toStartOf="@id/layout_preview_group"
-        app:layout_constraintStart_toEndOf="@id/layout_avatar"
+        app:layout_constraintStart_toEndOf="@id/iv_avatar"
         app:layout_constraintTop_toBottomOf="@id/tv_names"
-        tools:text="总计26人赞了我的评论" />
+        tools:text="赞了我的视频" />
 
     <TextView
         android:id="@+id/tv_time"
@@ -99,29 +88,50 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginTop="8dp"
-        android:textColor="#999999"
-        android:textSize="12sp"
-        app:layout_constraintStart_toEndOf="@id/layout_avatar"
+        android:textColor="#9499A0"
+        android:textSize="11sp"
+        app:layout_constraintStart_toEndOf="@id/iv_avatar"
         app:layout_constraintTop_toBottomOf="@id/tv_summary"
         tools:text="2天前" />
 
-    <ImageView
-        android:id="@+id/iv_more"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:contentDescription="@null"
-        android:src="@drawable/ic_more_vert"
-        app:layout_constraintBottom_toBottomOf="@id/tv_time"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/tv_time"
-        app:tint="#CCCCCC" />
+    <LinearLayout
+        android:id="@+id/btn_delete"
+        android:layout_width="wrap_content"
+        android:layout_height="28dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_comment_action_capsule"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp"
+        app:layout_constraintStart_toStartOf="@id/tv_summary"
+        app:layout_constraintTop_toBottomOf="@id/tv_time">
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_delete"
+            app:tint="#61666D" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:includeFontPadding="false"
+            android:text="@string/creator_delete"
+            android:textColor="#61666D"
+            android:textSize="12sp" />
+    </LinearLayout>
 
     <androidx.constraintlayout.widget.Barrier
         android:id="@+id/barrier_row_bottom"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:barrierDirection="bottom"
-        app:constraint_referenced_ids="tv_time,layout_preview_group,iv_more" />
+        app:constraint_referenced_ids="btn_delete,layout_preview_group" />
 
     <View
         android:layout_width="0dp"

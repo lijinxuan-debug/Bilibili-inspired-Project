@@ -6,29 +6,46 @@
     android:background="#FFFFFF"
     android:padding="24dp">
 
-    <ImageButton
-        android:id="@+id/btn_back"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="返回"
-        android:padding="12dp"
-        android:src="@drawable/ic_back_arrow"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/tv_title"
-        android:layout_width="wrap_content"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_header"
+        android:layout_width="0dp"
         android:layout_height="56dp"
-        android:gravity="center"
-        android:text="@string/account_register"
-        android:textColor="#333333"
-        android:textSize="18sp"
-        android:textStyle="bold"
+        android:layout_marginStart="-22dp"
+        android:layout_marginEnd="-22dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="返回"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_back_arrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="#212121" />
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/account_register"
+            android:textColor="#333333"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <TextView
         android:id="@+id/tv_label_account"
@@ -39,7 +56,7 @@
         android:textColor="#333333"
         android:textSize="16sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv_title" />
+        app:layout_constraintTop_toBottomOf="@+id/layout_header" />
 
     <EditText
         android:id="@+id/et_account"
@@ -136,7 +153,7 @@
         android:contentDescription="@string/toggle_password_visibility"
         android:padding="8dp"
         android:scaleType="centerInside"
-        android:src="@drawable/ic_visibility"
+        android:src="@drawable/ic_visibility_off"
         app:layout_constraintBottom_toBottomOf="@+id/et_password"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/et_password" />
@@ -185,7 +202,7 @@
         android:contentDescription="@string/toggle_password_visibility"
         android:padding="8dp"
         android:scaleType="centerInside"
-        android:src="@drawable/ic_visibility"
+        android:src="@drawable/ic_visibility_off"
         app:layout_constraintBottom_toBottomOf="@+id/et_password_confirm"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/et_password_confirm" />
@@ -262,47 +279,5 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/view_divider_3" />
-
-    <CheckBox
-        android:id="@+id/cb_agreement"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:minWidth="0dp"
-        android:minHeight="0dp"
-        android:padding="4dp"
-        android:background="@null"
-        android:button="@drawable/custom_checkbox_selector"
-
-        app:layout_constraintTop_toTopOf="@+id/tv_agreement_start"
-        app:layout_constraintBottom_toBottomOf="@id/tv_agreement_start"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/tv_agreement_start"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginBottom="16dp"
-        android:lineSpacingExtra="4dp"
-        android:text="@string/agreement"
-        android:textColor="#999999"
-        android:textSize="12sp"
-
-        app:layout_constraintBottom_toTopOf="@+id/tv_login_problem"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/cb_agreement" />
-
-    <TextView
-        android:id="@+id/tv_login_problem"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:text="@string/login_error"
-        android:textColor="#999999"
-        android:textSize="14sp"
-
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

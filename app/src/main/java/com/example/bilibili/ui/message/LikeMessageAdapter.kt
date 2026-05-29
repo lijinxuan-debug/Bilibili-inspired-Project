@@ -11,7 +11,9 @@ import com.example.bilibili.data.model.UserMessageItem
 import com.example.bilibili.databinding.ItemMessageLikeBinding
 import com.example.bilibili.util.GlideEngine
 
-class LikeMessageAdapter : PagingDataAdapter<UserMessageItem, LikeMessageAdapter.LikeHolder>(DiffCallback) {
+class LikeMessageAdapter(
+    private val onDelete: (UserMessageItem) -> Unit,
+) : PagingDataAdapter<UserMessageItem, LikeMessageAdapter.LikeHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LikeHolder {
         val binding = ItemMessageLikeBinding.inflate(
@@ -19,7 +21,7 @@ class LikeMessageAdapter : PagingDataAdapter<UserMessageItem, LikeMessageAdapter
             parent,
             false,
         )
-        return LikeHolder(binding)
+        return LikeHolder(binding, onDelete)
     }
 
     override fun onBindViewHolder(holder: LikeHolder, position: Int) {
@@ -28,6 +30,7 @@ class LikeMessageAdapter : PagingDataAdapter<UserMessageItem, LikeMessageAdapter
 
     class LikeHolder(
         private val binding: ItemMessageLikeBinding,
+        private val onDelete: (UserMessageItem) -> Unit,
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: UserMessageItem) {
@@ -36,6 +39,21 @@ class LikeMessageAdapter : PagingDataAdapter<UserMessageItem, LikeMessageAdapter
             binding.tvSummary.text = summaryText(context, item)
             binding.tvTime.text = MessageTimeFormatter.format(item.createTimeRaw)
             GlideEngine.loadUserAvatar(context, item.sendUserAvatar, binding.ivAvatar)
+
+            val openProfile = {
+                MessageNavigator.openUserProfile(context, item.sendUserId)
+            }
+            MessageNavigator.bindUserProfileClick(binding.ivAvatar, item.sendUserId, openProfile)
+            MessageNavigator.bindUserProfileClick(binding.tvNames, item.sendUserId, openProfile)
+
+            binding.btnDelete.setOnClickListener { onDelete(item) }
+
+            val openVideo = {
+                MessageNavigator.openVideo(context, item.videoId)
+            }
+            binding.root.setOnClickListener { openVideo() }
+            binding.layoutPreviewGroup.setOnClickListener { openVideo() }
+            binding.tvSummary.setOnClickListener { openVideo() }
 
             val previewText = item.previewTextForLike()
             val showCover = !item.isCommentTarget && item.videoCover.isNotBlank()

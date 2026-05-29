@@ -338,6 +338,29 @@ class VideoCommentFragment : Fragment() {
         }
     }
 
+    private fun applyCommentAnchorIfNeeded(list: List<CommentItem>) {
+        val anchor = viewModel.consumeCommentAnchor() ?: return
+        val result = CommentLocator.findInList(list, anchor) ?: run {
+            ToastUtils.showShort(requireContext(), getString(R.string.message_comment_not_found))
+            return
+        }
+        if (result.expandParentCommentId != null) {
+            // 定位到楼中楼回复：展开主评论以便看到子回复
+            commentAdapter.expandComment(result.expandParentCommentId)
+        } else {
+            val parent = list.firstOrNull { it.commentId == result.highlightCommentId }
+            if (parent != null && !parent.children.isNullOrEmpty()) {
+                commentAdapter.collapseComment(result.highlightCommentId)
+            }
+        }
+        commentAdapter.setHighlightedCommentId(result.highlightCommentId)
+        binding.rvComments.post {
+            val scrollTarget = result.expandParentCommentId ?: result.highlightCommentId
+            commentAdapter.scrollToComment(binding.rvComments, scrollTarget)
+            ToastUtils.showShort(requireContext(), getString(R.string.message_comment_located))
+        }
+    }
+
     private fun observeViewModel() {
         viewModel.commentTotalCount.observe(viewLifecycleOwner) { count ->
             updateEmptyState(count)
@@ -346,7 +369,7 @@ class VideoCommentFragment : Fragment() {
         // 观察评论列表数据变化
         viewModel.commentListLive.observe(viewLifecycleOwner) { list ->
             commentAdapter.setData(list) {
-                scrollCommentsToTop()
+                applyCommentAnchorIfNeeded(list)
             }
         }
 

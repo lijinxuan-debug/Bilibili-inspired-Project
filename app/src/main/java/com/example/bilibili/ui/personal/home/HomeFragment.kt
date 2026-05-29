@@ -83,18 +83,15 @@ class HomeFragment : Fragment() {
             }
         }
 
-        // 监听加载状态
-        viewLifecycleOwner.lifecycleScope.launch {
-            videoAdapter.loadStateFlow.collect { loadState ->
-                binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
-                PagingUiHelper.updateEmptyState(
-                    binding.emptyState.llEmpty,
-                    binding.rvHomeVideo,
-                    videoAdapter,
-                    loadState
-                )
-                val isEmpty = videoAdapter.itemCount == 0 && loadState.refresh !is LoadState.Loading
-                binding.llMore.visibility = if (isEmpty) GONE else VISIBLE
+        PagingUiHelper.bindEmptyState(
+            viewLifecycleOwner,
+            binding.emptyState.llEmpty,
+            binding.rvHomeVideo,
+            videoAdapter,
+        ) { loadState ->
+            binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
+            if (loadState.refresh !is LoadState.Loading) {
+                binding.llMore.visibility = if (videoAdapter.itemCount == 0) GONE else VISIBLE
             }
         }
     }

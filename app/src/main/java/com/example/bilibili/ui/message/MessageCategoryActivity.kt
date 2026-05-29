@@ -3,6 +3,7 @@ package com.example.bilibili.ui.message
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
@@ -15,7 +16,9 @@ import com.example.bilibili.data.api.MessageService
 import com.example.bilibili.data.api.PostService
 import com.example.bilibili.data.model.UserMessageItem
 import com.example.bilibili.databinding.ActivityMessageCategoryBinding
+import com.example.bilibili.ui.user.UserProfileActivity
 import com.example.bilibili.util.ApiJson.isSuccess
+import com.example.bilibili.util.PagingUiHelper
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.ToastUtils
 import kotlinx.coroutines.Job
@@ -30,7 +33,6 @@ class MessageCategoryActivity : AppCompatActivity() {
     private val postService = RetrofitClient.create(PostService::class.java)
 
     private var pageMode: Int = MODE_REPLY
-    private var atMeOnly: Int? = null
     private var pagingJob: Job? = null
     private lateinit var categoryAdapter: MessageCategoryAdapter
     private lateinit var likeAdapter: LikeMessageAdapter
@@ -47,67 +49,37 @@ class MessageCategoryActivity : AppCompatActivity() {
             else -> getString(R.string.message_quick_reply)
         }
 
-        categoryAdapter = MessageCategoryAdapter(pageMode) { item ->
-            followBack(item)
-        }
-        likeAdapter = LikeMessageAdapter()
+        categoryAdapter = MessageCategoryAdapter(
+            pageMode = pageMode,
+            onFollowBack = { item -> followBack(item) },
+            onDelete = { item -> confirmDeleteMessage(item) },
+        )
+        likeAdapter = LikeMessageAdapter(
+            onDelete = { item -> confirmDeleteMessage(item) },
+        )
         binding.rvList.layoutManager = LinearLayoutManager(this)
         binding.rvList.adapter = if (pageMode == MODE_LIKE) likeAdapter else categoryAdapter
 
         binding.btnBack.setOnClickListener { finish() }
-        binding.btnClear.setOnClickListener { markAllRead() }
         applyHeaderStyle()
-        setupTabsIfNeeded()
         setupSwipeRefresh()
         collectPaging()
     }
 
     private fun applyHeaderStyle() {
         if (pageMode == MODE_REPLY) {
-            binding.dividerHeader.isVisible = false
-            binding.layoutTabs.isVisible = true
+            binding.dividerHeader.isVisible = true
             return
         }
-        binding.layoutTabs.isVisible = false
         binding.dividerHeader.isVisible = true
         binding.tvTitle.updateLayoutParams<ConstraintLayout.LayoutParams> {
+            width = ConstraintLayout.LayoutParams.WRAP_CONTENT
             startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            startToEnd = ConstraintLayout.LayoutParams.UNSET
+            endToStart = ConstraintLayout.LayoutParams.UNSET
             marginStart = 0
-        }
-    }
-
-    private fun setupTabsIfNeeded() {
-        if (pageMode != MODE_REPLY) return
-        binding.layoutTabs.isVisible = true
-        updateTabUi(allSelected = true)
-        binding.tabAll.setOnClickListener {
-            if (atMeOnly != null) {
-                atMeOnly = null
-                updateTabUi(allSelected = true)
-                collectPaging()
-            }
-        }
-        binding.tabAtMe.setOnClickListener {
-            if (atMeOnly != 1) {
-                atMeOnly = 1
-                updateTabUi(allSelected = false)
-                collectPaging()
-            }
-        }
-    }
-
-    private fun updateTabUi(allSelected: Boolean) {
-        if (allSelected) {
-            binding.tabAll.setBackgroundResource(R.drawable.bg_message_tab_selected)
-            binding.tabAll.setTextColor(getColor(R.color.bili_pink))
-            binding.tabAtMe.background = null
-            binding.tabAtMe.setTextColor(getColor(R.color.bili_text_grey))
-        } else {
-            binding.tabAtMe.setBackgroundResource(R.drawable.bg_message_tab_selected)
-            binding.tabAtMe.setTextColor(getColor(R.color.bili_pink))
-            binding.tabAll.background = null
-            binding.tabAll.setTextColor(getColor(R.color.bili_text_grey))
+            horizontalBias = 0.5f
         }
     }
 
@@ -116,18 +88,13 @@ class MessageCategoryActivity : AppCompatActivity() {
         binding.swipeRefresh.setOnRefreshListener {
             if (pageMode == MODE_LIKE) likeAdapter.refresh() else categoryAdapter.refresh()
         }
-        lifecycleScope.launch {
-            val loadStates = if (pageMode == MODE_LIKE) {
-                likeAdapter.loadStateFlow
-            } else {
-                categoryAdapter.loadStateFlow
-            }
-            loadStates.collectLatest { state ->
-                binding.swipeRefresh.isRefreshing = state.refresh is LoadState.Loading
-                val count = if (pageMode == MODE_LIKE) likeAdapter.itemCount else categoryAdapter.itemCount
-                val isEmpty = state.refresh is LoadState.NotLoading && count == 0
-                binding.tvEmpty.isVisible = isEmpty
-            }
+        val listAdapter = if (pageMode == MODE_LIKE) likeAdapter else categoryAdapter
+        PagingUiHelper.bindOverlayEmptyState(
+            this,
+            binding.tvEmpty,
+            listAdapter,
+        ) { state ->
+            binding.swipeRefresh.isRefreshing = state.refresh is LoadState.Loading
         }
     }
 
@@ -161,36 +128,51 @@ class MessageCategoryActivity : AppCompatActivity() {
         pagingSourceFactory = {
             when (pageMode) {
                 MODE_FANS -> MessagePagingSource(messageType = MessageTypes.FANS)
-                else -> MessagePagingSource(
-                    messageType = MessageTypes.COMMENT,
-                    atMeOnly = atMeOnly,
-                )
+                else -> MessagePagingSource(messageType = MessageTypes.COMMENT)
             }
         },
     ).flow
 
-    private fun markAllRead() {
+    private fun confirmDeleteMessage(item: UserMessageItem) {
+        AlertDialog.Builder(this)
+            .setMessage(R.string.message_delete_confirm)
+            .setPositiveButton(android.R.string.ok) { _, _ -> deleteMessage(item) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun deleteMessage(item: UserMessageItem) {
+        if (item.messageId <= 0) return
         lifecycleScope.launch {
             try {
-                val ok = when (pageMode) {
-                    MODE_LIKE -> {
-                        val like = JSONObject(messageService.readAll(MessageTypes.LIKE)).isSuccess()
-                        val collect = JSONObject(messageService.readAll(MessageTypes.COLLECTION)).isSuccess()
-                        like && collect
-                    }
-                    MODE_FANS -> JSONObject(messageService.readAll(MessageTypes.FANS)).isSuccess()
-                    else -> JSONObject(messageService.readAll(MessageTypes.COMMENT)).isSuccess()
-                }
+                val ok = JSONObject(messageService.delMessage(item.messageId)).isSuccess()
                 if (ok) {
-                    ToastUtils.showShort(this@MessageCategoryActivity, getString(R.string.message_clear_done))
-                    if (pageMode == MODE_LIKE) likeAdapter.refresh() else categoryAdapter.refresh()
+                    ToastUtils.showShort(this@MessageCategoryActivity, getString(R.string.message_delete_done))
+                    if (pageMode == MODE_LIKE) {
+                        likeAdapter.refresh()
+                    } else {
+                        categoryAdapter.refresh()
+                    }
+                    runCatching { MessageUnreadCenter.refreshFromApi(messageService) }
                 } else {
-                    ToastUtils.showShort(this@MessageCategoryActivity, "操作失败")
+                    ToastUtils.showShort(this@MessageCategoryActivity, "删除失败")
                 }
             } catch (e: Exception) {
-                ToastUtils.showShort(this@MessageCategoryActivity, e.message ?: "操作失败")
+                ToastUtils.showShort(this@MessageCategoryActivity, e.message ?: "删除失败")
             }
         }
+    }
+
+    private fun openUserProfile(userId: String) {
+        if (userId.isBlank()) {
+            ToastUtils.showShort(this, "用户信息不可用")
+            return
+        }
+        startActivity(
+            Intent(this, UserProfileActivity::class.java).apply {
+                putExtra("user_id", userId)
+            },
+        )
     }
 
     private fun followBack(item: UserMessageItem) {

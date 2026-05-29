@@ -30,6 +30,8 @@
             android:id="@+id/tv_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:textColor="#212121"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -37,62 +39,6 @@
             app:layout_constraintStart_toEndOf="@id/btn_back"
             app:layout_constraintTop_toTopOf="@id/btn_back"
             tools:text="回复与@" />
-
-        <ImageButton
-            android:id="@+id/btn_clear"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/message_clear"
-            android:padding="12dp"
-            android:src="@drawable/ic_clean"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="#212121" />
-
-        <LinearLayout
-            android:id="@+id/layout_tabs"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="2dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:visibility="gone"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/btn_back"
-            tools:visibility="visible">
-
-            <TextView
-                android:id="@+id/tab_all"
-                android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:background="@drawable/bg_message_tab_selected"
-                android:gravity="center"
-                android:paddingHorizontal="18dp"
-                android:text="@string/message_tab_all"
-                android:textColor="@color/bili_pink"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/tab_at_me"
-                android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:layout_marginStart="10dp"
-                android:gravity="center"
-                android:paddingHorizontal="18dp"
-                android:text="@string/message_tab_at_me"
-                android:textColor="#999999"
-                android:textSize="14sp" />
-        </LinearLayout>
-
-        <!-- 非回复页：标题居中 -->
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/guideline_center"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintGuide_percent="0.5" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <View

@@ -13,9 +13,10 @@ import com.example.bilibili.data.api.CategoryInfoService
 import com.example.bilibili.data.model.CategoryInfo
 import com.example.bilibili.databinding.FragmentPartitionBinding
 import com.example.bilibili.ui.releaseVideo.ReleaseVideoViewModel
+import com.example.bilibili.util.ApiResponseHelper
+import com.example.bilibili.util.CategoryPartitionHelper
 import com.example.bilibili.util.RetrofitClient
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 class PartitionFragment : Fragment() {
 
@@ -58,23 +59,22 @@ class PartitionFragment : Fragment() {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            val categoryInfo = JSONObject(service.loadAllCategoryInfo())
-
-            if (categoryInfo.optInt("code") == 200) {
-                val data = categoryInfo.getJSONArray("data")
-                for (i in 0 until data.length() ) {
-                    val item = data.getJSONObject(i)
-                    val categoryInfo = CategoryInfo(
-                        categoryId = item.optInt("categoryId"),
-                        categoryName = item.getString("categoryName")
-                    )
-                    partitionList.add(categoryInfo)
+            val response = service.loadAllCategoryInfo()
+            if (ApiResponseHelper.isSuccess(response)) {
+                val data = CategoryPartitionHelper.parseCategoryTreeData(response)
+                if (data != null) {
+                    for (i in 0 until data.length()) {
+                        val item = data.getJSONObject(i)
+                        partitionList.add(
+                            CategoryInfo(
+                                categoryId = item.optInt("categoryId"),
+                                categoryName = item.optString("categoryName"),
+                            ),
+                        )
+                    }
                 }
             }
-
-            // 确保获取完请求再初始化适配器
-            partitionAdapter.submitList(partitionList)
-
+            partitionAdapter.submitList(partitionList.toList())
         }
 
         // 4. 观察 ViewModel 里的选中分区，实时更新 Adapter 的选中态

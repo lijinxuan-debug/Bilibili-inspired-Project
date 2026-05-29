@@ -8,6 +8,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.core.widget.doOnTextChanged
 import com.example.bilibili.databinding.LayoutBottomSheetIntroductionBinding
 import com.example.bilibili.ui.releaseVideo.ReleaseVideoViewModel
+import com.example.bilibili.util.TextSelectHandleHelper
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 class IntroductionBottomSheetDialogFragment : BottomSheetDialogFragment() {
@@ -26,6 +27,7 @@ class IntroductionBottomSheetDialogFragment : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        TextSelectHandleHelper.applyPinkHandlesIn(view)
         setupIntroductionInput()
         setupButtons()
     }

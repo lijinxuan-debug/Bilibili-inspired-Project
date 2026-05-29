@@ -26,4 +26,19 @@ interface MessageService {
     suspend fun readAll(
         @Field("messageType") messageType: Int,
     ): String
+
+    @POST("message/getNoReadCountGroup")
+    suspend fun getNoReadCountGroup(): String
+
+    @POST("message/readMessage")
+    @FormUrlEncoded
+    suspend fun readMessage(
+        @Field("messageId") messageId: Int,
+    ): String
+
+    @POST("message/delMessage")
+    @FormUrlEncoded
+    suspend fun delMessage(
+        @Field("messageId") messageId: Int,
+    ): String
 }

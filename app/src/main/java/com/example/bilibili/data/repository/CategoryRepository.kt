@@ -56,8 +56,18 @@ class CategoryRepository(
                 CategoryItem(
                     categoryId = item.getInt("categoryId"),
                     categoryName = item.getString("categoryName"),
-                )
+                ),
             )
+            val children = item.optJSONArray("children") ?: continue
+            for (j in 0 until children.length()) {
+                val child = children.getJSONObject(j)
+                list.add(
+                    CategoryItem(
+                        categoryId = child.getInt("categoryId"),
+                        categoryName = child.getString("categoryName"),
+                    ),
+                )
+            }
         }
         return list
     }

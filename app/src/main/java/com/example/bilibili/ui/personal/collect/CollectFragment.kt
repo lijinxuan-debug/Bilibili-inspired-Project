@@ -58,17 +58,13 @@ class CollectFragment : Fragment() {
             }
         }
 
-        // 监听加载状态
-        viewLifecycleOwner.lifecycleScope.launch {
-            collectAdapter.loadStateFlow.collect { loadState ->
-                binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
-                PagingUiHelper.updateEmptyState(
-                    binding.emptyState.llEmpty,
-                    binding.recyclerView,
-                    collectAdapter,
-                    loadState
-                )
-            }
+        PagingUiHelper.bindEmptyState(
+            viewLifecycleOwner,
+            binding.emptyState.llEmpty,
+            binding.recyclerView,
+            collectAdapter,
+        ) { loadState ->
+            binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
         }
     }
 

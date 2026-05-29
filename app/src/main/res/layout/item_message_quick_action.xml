@@ -3,27 +3,54 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:gravity="center_horizontal"
     android:orientation="vertical"
     android:paddingVertical="8dp">
 
+    <!-- 外层留出空间，避免角标被 48dp 图标区域裁剪 -->
     <FrameLayout
-        android:layout_width="48dp"
-        android:layout_height="48dp">
+        android:layout_width="56dp"
+        android:layout_height="52dp"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
-        <View
-            android:id="@+id/view_icon_bg"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            tools:background="@drawable/bg_message_quick_green" />
+        <FrameLayout
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center">
 
-        <ImageView
-            android:id="@+id/iv_icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center"
-            android:contentDescription="@null"
-            tools:src="@drawable/ic_message_quick_reply" />
+            <View
+                android:id="@+id/view_icon_bg"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_message_quick_grey" />
+
+            <ImageView
+                android:id="@+id/iv_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                tools:src="@drawable/ic_message_quick_reply" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tv_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="18dp"
+            android:layout_gravity="top|end"
+            android:background="@drawable/bg_message_unread_badge"
+            android:elevation="2dp"
+            android:gravity="center"
+            android:minWidth="18dp"
+            android:paddingHorizontal="4dp"
+            android:textColor="@color/white"
+            android:textSize="11sp"
+            android:visibility="gone"
+            tools:text="3"
+            tools:visibility="visible" />
     </FrameLayout>
 
     <TextView

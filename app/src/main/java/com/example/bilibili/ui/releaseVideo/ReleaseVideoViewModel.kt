@@ -7,10 +7,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.bilibili.R
-import com.example.bilibili.data.api.CategoryInfoService
 import com.example.bilibili.data.api.FileService
 import com.example.bilibili.data.api.PostService
 import com.example.bilibili.data.api.UcenterService
+import com.example.bilibili.data.api.VideoService
+import com.example.bilibili.data.repository.CategoryTreeLoader
 import com.example.bilibili.util.CategoryPartitionHelper
 import com.example.bilibili.data.model.CategoryInfo
 import com.example.bilibili.data.model.ReleaseVideoPart
@@ -122,6 +123,34 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
         videoCoverUrl.value = url
     }
 
+    private suspend fun readCategoryIdsForEdit(videoId: String, videoInfo: JSONObject): Pair<Int, Int> {
+        var (pCategoryId, categoryId) = CategoryPartitionHelper.readVideoCategoryIds(videoInfo)
+        if (pCategoryId > 0 || categoryId > 0) {
+            return pCategoryId to categoryId
+        }
+        return try {
+            val response = RetrofitClient.create(VideoService::class.java).getVideoInfo(videoId)
+            if (!ApiResponseHelper.isSuccess(response)) {
+                return 0 to 0
+            }
+            val published = JSONObject(response).getJSONObject("data").getJSONObject("videoInfo")
+            CategoryPartitionHelper.readVideoCategoryIds(published)
+        } catch (e: Exception) {
+            Log.w("ReleaseVideo", "read category from video/getVideoInfo failed", e)
+            0 to 0
+        }
+    }
+
+    private suspend fun resolvePartitionForEdit(pCategoryId: Int, categoryId: Int): CategoryInfo? {
+        if (pCategoryId <= 0 && categoryId <= 0) return null
+        return try {
+            CategoryTreeLoader.resolvePartition(getApplication(), pCategoryId, categoryId)
+        } catch (e: Exception) {
+            Log.w("ReleaseVideo", "resolve partition names failed", e)
+            null
+        }
+    }
+
     fun loadVideoForEdit(videoId: String) {
         editingVideoId = videoId
         viewModelScope.launch(Dispatchers.IO) {
@@ -154,22 +183,15 @@ class ReleaseVideoViewModel(application: Application) : AndroidViewModel(applica
                 )
                 repostSource.postValue(videoInfo.optString("originInfo"))
 
-                val pCategoryId = videoInfo.optInt("pCategoryId")
-                val categoryId = videoInfo.optInt("categoryId")
-                if (pCategoryId > 0) {
-                    val partition = try {
-                        val categoryService = RetrofitClient.create(CategoryInfoService::class.java)
-                        val treeResponse = categoryService.loadAllCategoryInfo()
-                        CategoryPartitionHelper.resolveFromIds(pCategoryId, categoryId, treeResponse)
-                    } catch (e: Exception) {
-                        Log.w("ReleaseVideo", "resolve partition names failed", e)
-                        null
-                    } ?: CategoryInfo(
-                        categoryId = pCategoryId,
-                        categoryName = "",
-                        subCategoryId = categoryId.takeIf { it > 0 },
-                    )
+                val (pCategoryId, categoryId) = readCategoryIdsForEdit(videoId, videoInfo)
+                val partition = resolvePartitionForEdit(pCategoryId, categoryId)
+                if (partition != null) {
                     selectedPartition.postValue(partition)
+                } else if (pCategoryId > 0 || categoryId > 0) {
+                    Log.w(
+                        "ReleaseVideo",
+                        "partition ids present but names missing: p=$pCategoryId c=$categoryId",
+                    )
                 }
 
                 val parts = mutableListOf<ReleaseVideoPart>()

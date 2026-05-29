@@ -17,7 +17,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.widget.TextViewCompat
+import com.example.bilibili.util.TextSelectHandleHelper
 import androidx.lifecycle.lifecycleScope
 import com.example.bilibili.R
 import com.example.bilibili.data.api.PostService
@@ -92,39 +92,6 @@ class EditActivity : AppCompatActivity() {
                 handleBackPress()
             }
         })
-    }
-
-    private fun setEditTextSelectionHandlesColor(editText: EditText) {
-        // 通过反射设置文本选择手柄的颜色
-        try {
-            val editorField = TextViewCompat::class.java.getDeclaredField("mEditor")
-            editorField.isAccessible = true
-            val editor = editorField.get(editText)
-
-            val editorClass = editor?.javaClass
-            val selectHandleLeftField = editorClass?.getDeclaredField("mSelectHandleLeft")
-            val selectHandleRightField = editorClass?.getDeclaredField("mSelectHandleRight")
-            val selectHandleCenterField = editorClass?.getDeclaredField("mSelectHandleCenter")
-
-            selectHandleLeftField?.isAccessible = true
-            selectHandleRightField?.isAccessible = true
-            selectHandleCenterField?.isAccessible = true
-
-            val drawableLeft = resources.getDrawable(R.drawable.text_cursor_handle_left, null)
-            val drawableRight = resources.getDrawable(R.drawable.text_cursor_handle_right, null)
-            val drawableCenter = resources.getDrawable(R.drawable.text_cursor_handle_middle, null)
-
-            selectHandleLeftField?.set(editor, drawableLeft)
-            selectHandleRightField?.set(editor, drawableRight)
-            selectHandleCenterField?.set(editor, drawableCenter)
-
-            drawableLeft?.setTint(resources.getColor(R.color.bilibili_pink, null))
-            drawableRight?.setTint(resources.getColor(R.color.bilibili_pink, null))
-            drawableCenter?.setTint(resources.getColor(R.color.bilibili_pink, null))
-        } catch (e: Exception) {
-            // 反射失败，忽略错误
-            e.printStackTrace()
-        }
     }
 
     private fun setupWindowInsets() {
@@ -298,7 +265,7 @@ class EditActivity : AppCompatActivity() {
         editText.hint = hint
         editText.maxLines = maxLines
         editText.imeOptions = EditorInfo.IME_ACTION_DONE
-        setEditTextSelectionHandlesColor(editText)
+        TextSelectHandleHelper.applyPinkHandlesIn(dialogBinding.root)
 
         editText.setText(currentText)
         editText.selectAll()

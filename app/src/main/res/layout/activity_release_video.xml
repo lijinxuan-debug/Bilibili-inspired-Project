@@ -322,13 +322,27 @@
         android:padding="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <CheckBox
-            android:id="@+id/checkbox_agreement"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:buttonTint="@color/bili_pink"
-            android:text="我已阅读并接受《哔哩哔哩社区公约》"
-            android:textSize="12sp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <CheckBox
+                android:id="@+id/checkbox_agreement"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/bili_pink" />
+
+            <TextView
+                android:id="@+id/tv_agreement"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="#666666"
+                android:textSize="12sp"
+                tools:text="我已阅读并接受《避风港社区公约》" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

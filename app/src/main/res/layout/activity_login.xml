@@ -101,7 +101,7 @@
         android:contentDescription="@string/toggle_password_visibility"
         android:padding="8dp"
         android:scaleType="centerInside"
-        android:src="@drawable/ic_visibility"
+        android:src="@drawable/ic_visibility_off"
         app:layout_constraintBottom_toBottomOf="@+id/et_password"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/et_password" />
@@ -189,47 +189,5 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btn_login" />
-
-    <CheckBox
-        android:id="@+id/cb_agreement"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:minWidth="0dp"
-        android:minHeight="0dp"
-        android:padding="4dp"
-        android:background="@null"
-        android:button="@drawable/custom_checkbox_selector"
-
-        app:layout_constraintTop_toTopOf="@+id/tv_agreement_start"
-        app:layout_constraintBottom_toBottomOf="@id/tv_agreement_start"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/tv_agreement_start"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginBottom="16dp"
-        android:lineSpacingExtra="4dp"
-        android:text="@string/agreement"
-        android:textColor="#999999"
-        android:textSize="12sp"
-
-        app:layout_constraintBottom_toTopOf="@+id/tv_login_problem"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/cb_agreement" />
-
-    <TextView
-        android:id="@+id/tv_login_problem"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:text="@string/login_error"
-        android:textColor="#999999"
-        android:textSize="14sp"
-
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

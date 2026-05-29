@@ -12,6 +12,7 @@ import androidx.core.widget.doOnTextChanged
 import com.example.bilibili.R
 import com.example.bilibili.databinding.LayoutBottomSheetAuthorStatementBinding
 import com.example.bilibili.ui.releaseVideo.ReleaseVideoViewModel
+import com.example.bilibili.util.TextSelectHandleHelper
 import com.example.bilibili.util.ToastUtils
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
@@ -31,6 +32,7 @@ class AuthorStatementBottomSheetDialogFragment : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        TextSelectHandleHelper.applyPinkHandlesIn(view)
         setupRadioGroup()
         setupSourceInput()
         setupButtons()

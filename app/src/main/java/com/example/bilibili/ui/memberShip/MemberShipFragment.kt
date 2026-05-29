@@ -65,19 +65,15 @@ class MemberShipFragment : Fragment() {
             }
         }
 
-        // 4. 监听加载状态
-        viewLifecycleOwner.lifecycleScope.launch {
-            fansAdapter.loadStateFlow.collect { loadState ->
-                binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
-                PagingUiHelper.updateEmptyState(
-                    binding.emptyState.llEmpty,
-                    binding.rvFans,
-                    fansAdapter,
-                    loadState,
-                )
-                if (loadState.refresh is LoadState.NotLoading) {
-                    binding.tvCountNumber.text = "${fansAdapter.itemCount}人"
-                }
+        PagingUiHelper.bindEmptyState(
+            viewLifecycleOwner,
+            binding.emptyState.llEmpty,
+            binding.rvFans,
+            fansAdapter,
+        ) { loadState ->
+            binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
+            if (loadState.refresh is LoadState.NotLoading) {
+                binding.tvCountNumber.text = "${fansAdapter.itemCount}人"
             }
         }
     }

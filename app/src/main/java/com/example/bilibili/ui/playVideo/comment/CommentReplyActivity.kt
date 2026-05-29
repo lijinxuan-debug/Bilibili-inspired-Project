@@ -13,15 +13,16 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bilibili.R
 import com.example.bilibili.data.api.CommentService
+import android.app.Activity
 import com.example.bilibili.data.model.CommentItem
+import com.example.bilibili.data.model.UserMessageItem
 import com.example.bilibili.databinding.ActivityCommentReplyBinding
+import com.example.bilibili.ui.playVideo.CommentAnchor
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.SPUtils
 import com.example.bilibili.util.ToastUtils
 import com.example.bilibili.util.UserInfoText
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import org.json.JSONArray
-import org.json.JSONObject
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -37,15 +38,31 @@ class CommentReplyActivity : AppCompatActivity() {
     private var replyNickName: String? = null
     private var videoId: String? = null
     private val comments = mutableListOf<CommentItem>()
+    private val allRootComments = mutableListOf<CommentItem>()
     private var pageNo = 1
     private var isLoading = false
     private var hasMore = true
+    private var anchorSendUserId: String? = null
+    private var anchorContent: String? = null
+    private var anchorHighlightApplied = false
 
     companion object {
         private const val ARG_COMMENT_ID = "comment_id"
         private const val ARG_REPLY_USER_ID = "reply_user_id"
         private const val ARG_REPLY_NICK_NAME = "reply_nick_name"
         private const val ARG_VIDEO_ID = "video_id"
+        private const val ARG_ANCHOR_SEND_USER_ID = "anchor_send_user_id"
+        private const val ARG_ANCHOR_CONTENT = "anchor_content"
+
+        fun startFromMessage(activity: Activity, item: UserMessageItem) {
+            val intent = Intent(activity, CommentReplyActivity::class.java).apply {
+                putExtra(ARG_COMMENT_ID, item.commentId)
+                putExtra(ARG_VIDEO_ID, item.videoId)
+                putExtra(ARG_ANCHOR_SEND_USER_ID, item.sendUserId)
+                putExtra(ARG_ANCHOR_CONTENT, item.messageContent)
+            }
+            activity.startActivity(intent)
+        }
 
         fun start(
             activity: FragmentActivity,
@@ -75,6 +92,8 @@ class CommentReplyActivity : AppCompatActivity() {
         replyUserId = intent.getStringExtra(ARG_REPLY_USER_ID)
         replyNickName = intent.getStringExtra(ARG_REPLY_NICK_NAME)
         videoId = intent.getStringExtra(ARG_VIDEO_ID)
+        anchorSendUserId = intent.getStringExtra(ARG_ANCHOR_SEND_USER_ID)
+        anchorContent = intent.getStringExtra(ARG_ANCHOR_CONTENT)
 
         if (commentId == -1) {
             ToastUtils.showShort(this, "评论信息错误")
@@ -89,7 +108,11 @@ class CommentReplyActivity : AppCompatActivity() {
 
     private fun setupViews() {
         // 设置标题
-        binding.tvTitle.text = if (replyNickName != null) "回复 @$replyNickName" else "全部回复"
+        binding.tvTitle.text = when {
+            !anchorSendUserId.isNullOrBlank() -> getString(R.string.message_comment_detail_title)
+            replyNickName != null -> "回复 @$replyNickName"
+            else -> "全部回复"
+        }
 
         // 返回按钮
         binding.ivBack.setOnClickListener { finish() }
@@ -149,44 +172,33 @@ class CommentReplyActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val result = withContext(Dispatchers.IO) {
+                val pageResult = withContext(Dispatchers.IO) {
                     commentService.loadComment(
                         videoId = videoId ?: "",
                         pageNo = pageNo,
-                        orderType = 0 // 热度排序
+                        orderType = 0,
                     )
+                }.let { CommentResponseParser.parsePage(it) }
+
+                if (pageResult == null) {
+                    showEmptyIfNeeded()
+                    hasMore = false
+                    return@launch
                 }
 
-                val jsonObject = JSONObject(result)
-                val data = jsonObject.optJSONArray("data")
+                allRootComments.addAll(pageResult.comments)
+                hasMore = pageResult.hasMore
 
-                if (data != null && data.length() > 0) {
-                    for (i in 0 until data.length()) {
-                        val commentObj = data.getJSONObject(i)
-                        val comment = parseCommentItem(commentObj)
-
-                        // 只添加当前评论的子回复
-                        if (comment.pCommentId == commentId) {
-                            comments.add(comment)
-                        }
-                    }
-
-                    if (comments.isEmpty()) {
-                        binding.tvEmpty.visibility = View.VISIBLE
-                        binding.rvReplies.visibility = View.GONE
-                    } else {
-                        binding.tvEmpty.visibility = View.GONE
-                        binding.rvReplies.visibility = View.VISIBLE
-                        adapter?.submitList(comments.toList())
-                    }
-
-                    hasMore = data.length() >= 10 // 假设每页10条
+                val replies = CommentTreeHelper.directReplies(allRootComments, commentId)
+                if (replies.isNotEmpty()) {
+                    bindReplies(replies)
+                } else if (hasMore) {
+                    pageNo++
+                    isLoading = false
+                    loadReplies()
+                    return@launch
                 } else {
-                    hasMore = false
-                    if (pageNo == 1) {
-                        binding.tvEmpty.visibility = View.VISIBLE
-                        binding.rvReplies.visibility = View.GONE
-                    }
+                    bindReplies(replies)
                 }
             } catch (e: Exception) {
                 Log.e("CommentReplyActivity", "加载回复失败", e)
@@ -197,40 +209,52 @@ class CommentReplyActivity : AppCompatActivity() {
         }
     }
 
+    private fun bindReplies(replies: List<CommentItem>) {
+        comments.clear()
+        comments.addAll(replies)
+        if (comments.isEmpty()) {
+            binding.tvEmpty.visibility = View.VISIBLE
+            binding.rvReplies.visibility = View.GONE
+        } else {
+            binding.tvEmpty.visibility = View.GONE
+            binding.rvReplies.visibility = View.VISIBLE
+            adapter?.submitList(comments.toList())
+            applyAnchorHighlight()
+        }
+    }
+
+    private fun showEmptyIfNeeded() {
+        if (comments.isEmpty()) {
+            binding.tvEmpty.visibility = View.VISIBLE
+            binding.rvReplies.visibility = View.GONE
+        }
+    }
+
     private fun loadMoreReplies() {
+        if (!hasMore || isLoading) return
         pageNo++
         loadReplies()
     }
 
-    private fun parseCommentItem(obj: JSONObject): CommentItem {
-        // 解析子评论
-        val childrenArray = obj.optJSONArray("children")
-        val children = mutableListOf<CommentItem>()
-        if (childrenArray != null) {
-            for (i in 0 until childrenArray.length()) {
-                children.add(parseCommentItem(childrenArray.getJSONObject(i)))
-            }
+    private fun applyAnchorHighlight() {
+        if (anchorHighlightApplied) return
+        val userId = anchorSendUserId.orEmpty()
+        val content = anchorContent.orEmpty()
+        if (userId.isBlank() && content.isBlank()) return
+        val anchor = CommentAnchor(sendUserId = userId, content = content, parentCommentId = commentId)
+        val result = CommentLocator.findInFlatList(comments, anchor) ?: run {
+            ToastUtils.showShort(this, getString(R.string.message_comment_not_found))
+            return
         }
-
-        return CommentItem(
-            commentId = obj.optInt("commentId"),
-            pCommentId = obj.optInt("pCommentId"),
-            videoId = obj.optString("videoId"),
-            videoUserId = obj.optString("videoUserId"),
-            content = obj.optString("content"),
-            imgPath = if (obj.has("imgPath") && !obj.isNull("imgPath")) obj.optString("imgPath") else null,
-            userId = obj.optString("userId"),
-            replyUserId = if (obj.has("replyUserId") && !obj.isNull("replyUserId")) obj.optString("replyUserId") else null,
-            topType = obj.optInt("topType"),
-            postTime = obj.optString("postTime"),
-            likeCount = obj.optInt("likeCount"),
-            hateCount = obj.optInt("hateCount"),
-            avatar = UserInfoText.normalize(obj.optString("avatar")),
-            nickName = obj.optString("nickName"),
-            replyAvatar = if (obj.has("replyAvatar") && !obj.isNull("replyAvatar")) obj.optString("replyAvatar") else null,
-            replyNickName = if (obj.has("replyNickName") && !obj.isNull("replyNickName")) obj.optString("replyNickName") else null,
-            children = if (children.isEmpty()) null else children
-        )
+        anchorHighlightApplied = true
+        adapter?.setHighlightedCommentId(result.highlightCommentId)
+        binding.rvReplies.post {
+            val position = comments.indexOfFirst { it.commentId == result.highlightCommentId }
+            if (position >= 0) {
+                binding.rvReplies.smoothScrollToPosition(position)
+            }
+            ToastUtils.showShort(this, getString(R.string.message_comment_located))
+        }
     }
 
     private fun showCommentDialog(replyToName: String? = null, replyToUserId: String? = null) {

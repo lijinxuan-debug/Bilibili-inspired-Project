@@ -4,6 +4,12 @@ import android.annotation.SuppressLint
 import android.app.Dialog
 import android.animation.ObjectAnimator
 import android.graphics.Color
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.TextPaint
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.style.ForegroundColorSpan
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.Log
@@ -33,8 +39,11 @@ import com.example.bilibili.databinding.LayoutPartMoreMenuBinding
 import com.example.bilibili.ui.releaseVideo.bottomSheet.AuthorStatementBottomSheetDialogFragment
 import com.example.bilibili.ui.releaseVideo.bottomSheet.IntroductionBottomSheetDialogFragment
 import com.example.bilibili.ui.releaseVideo.bottomSheet.PartTitleBottomSheetDialogFragment
+import com.example.bilibili.ui.convention.CommunityConventionActivity
 import com.example.bilibili.ui.releaseVideo.bottomSheet.TagBottomSheetDialogFragment
+import androidx.core.content.ContextCompat
 import com.example.bilibili.util.GlideEngine
+import com.example.bilibili.util.fixHorizontalScrollConflictWithParent
 import com.example.bilibili.util.PermissionHelper
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.ToastUtils
@@ -101,6 +110,7 @@ class ReleaseVideoActivity : AppCompatActivity() {
         })
 
         setupVideoPartsList()
+        setupPublishAgreement()
 
         val editVideoId = intent.getStringExtra(EXTRA_VIDEO_ID)
         if (!editVideoId.isNullOrBlank()) {
@@ -305,6 +315,7 @@ class ReleaseVideoActivity : AppCompatActivity() {
             changeDuration = 0L
         }
         partItemTouchHelper.attachToRecyclerView(binding.rvVideoParts)
+        binding.rvVideoParts.fixHorizontalScrollConflictWithParent()
     }
 
     private fun refreshUploadUi() {
@@ -679,6 +690,40 @@ class ReleaseVideoActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun setupPublishAgreement() {
+        val prefix = getString(R.string.publish_protocol_prefix)
+        val link = getString(R.string.community_convention_link)
+        val full = prefix + link
+        val spannable = SpannableString(full)
+        val linkStart = prefix.length
+        val linkEnd = full.length
+        val pink = ContextCompat.getColor(this, R.color.bili_pink)
+        spannable.setSpan(
+            ForegroundColorSpan(pink),
+            linkStart,
+            linkEnd,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+        )
+        spannable.setSpan(
+            object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    CommunityConventionActivity.start(this@ReleaseVideoActivity)
+                }
+
+                override fun updateDrawState(ds: TextPaint) {
+                    ds.color = pink
+                    ds.isUnderlineText = false
+                }
+            },
+            linkStart,
+            linkEnd,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+        )
+        binding.tvAgreement.text = spannable
+        binding.tvAgreement.movementMethod = LinkMovementMethod.getInstance()
+        binding.tvAgreement.highlightColor = Color.TRANSPARENT
     }
 
     /**

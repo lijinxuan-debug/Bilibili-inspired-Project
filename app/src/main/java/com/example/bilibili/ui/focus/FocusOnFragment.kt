@@ -56,19 +56,15 @@ class FocusOnFragment : Fragment() {
             focusAdapter.refresh()
         }
 
-        // 5. 监听加载状态
-        viewLifecycleOwner.lifecycleScope.launch {
-            focusAdapter.loadStateFlow.collect { loadState ->
-                binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
-                PagingUiHelper.updateEmptyState(
-                    binding.emptyState.llEmpty,
-                    binding.rvFriends,
-                    focusAdapter,
-                    loadState,
-                )
-                if (loadState.refresh is LoadState.NotLoading) {
-                    binding.tvCountNumber.text = "${focusAdapter.itemCount}人"
-                }
+        PagingUiHelper.bindEmptyState(
+            viewLifecycleOwner,
+            binding.emptyState.llEmpty,
+            binding.rvFriends,
+            focusAdapter,
+        ) { loadState ->
+            binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
+            if (loadState.refresh is LoadState.NotLoading) {
+                binding.tvCountNumber.text = "${focusAdapter.itemCount}人"
             }
         }
     }

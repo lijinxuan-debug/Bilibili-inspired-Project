@@ -41,9 +41,7 @@ class PartTitleBottomSheetDialogFragment : BottomSheetDialogFragment() {
         val safeTitle = arguments?.getString(ARG_CURRENT_TITLE).orEmpty().take(maxLen)
 
         binding.etPartTitleInput.setText(safeTitle)
-        binding.etPartTitleInput.post {
-            TextSelectHandleHelper.applyPinkHandles(binding.etPartTitleInput)
-        }
+        TextSelectHandleHelper.applyPinkHandlesIn(view)
         val length = binding.etPartTitleInput.text?.length ?: 0
         if (length > 0) {
             binding.etPartTitleInput.setSelection(length)

@@ -14,24 +14,23 @@
         android:id="@+id/iv_avatar"
         android:layout_width="40dp"
         android:layout_height="40dp"
+        android:contentDescription="@null"
         android:scaleType="centerCrop"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:shapeAppearanceOverlay="@style/CircleImage"
         tools:src="@tools:sample/avatars" />
 
-    <LinearLayout
+    <FrameLayout
         android:id="@+id/layout_preview_group"
-        android:layout_width="wrap_content"
+        android:layout_width="72dp"
         android:layout_height="wrap_content"
-        android:gravity="bottom"
-        android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/tv_preview"
-            android:layout_width="72dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:gravity="top|end"
@@ -39,7 +38,16 @@
             android:textColor="@color/grey"
             android:textSize="12sp"
             tools:text="做好了，可以分享源码" />
-    </LinearLayout>
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/iv_preview_cover"
+            android:layout_width="72dp"
+            android:layout_height="48dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            app:shapeAppearanceOverlay="@style/RoundedImage4"
+            tools:visibility="visible" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/tv_name"
@@ -85,66 +93,56 @@
         app:layout_constraintTop_toBottomOf="@id/tv_name"
         tools:text="求求惹" />
 
-    <ImageView
-        android:id="@+id/iv_more"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:layout_marginEnd="6dp"
-        android:layout_marginBottom="2dp"
-        android:contentDescription="@null"
-        android:src="@drawable/ic_more_vert"
-        app:layout_constraintEnd_toEndOf="@id/tv_content"
-        app:layout_constraintTop_toTopOf="@id/btn_like"
-        app:tint="#CCCCCC" />
-
     <TextView
         android:id="@+id/tv_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
-        android:layout_marginTop="12dp"
-        android:textColor="#999999"
-        android:textSize="12sp"
+        android:layout_marginTop="8dp"
+        android:textColor="#9499A0"
+        android:textSize="11sp"
         app:layout_constraintStart_toEndOf="@id/iv_avatar"
         app:layout_constraintTop_toBottomOf="@id/tv_content"
         tools:text="5月19日" />
 
-    <TextView
-        android:id="@+id/btn_reply"
+    <LinearLayout
+        android:id="@+id/btn_delete"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="14dp"
-        android:drawablePadding="4dp"
-        android:gravity="center_vertical"
-        android:text="@string/message_action_reply"
-        android:textColor="#999999"
-        android:textSize="12sp"
-        app:drawableStartCompat="@drawable/ic_message_reply_outline"
-        app:layout_constraintBottom_toBottomOf="@id/tv_time"
-        app:layout_constraintStart_toEndOf="@id/tv_time"
-        app:layout_constraintTop_toTopOf="@id/tv_time" />
+        android:layout_height="28dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_comment_action_capsule"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp"
+        app:layout_constraintStart_toStartOf="@id/tv_content"
+        app:layout_constraintTop_toBottomOf="@id/tv_time">
 
-    <TextView
-        android:id="@+id/btn_like"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="14dp"
-        android:drawablePadding="4dp"
-        android:gravity="center_vertical"
-        android:text="@string/message_action_like"
-        android:textColor="#999999"
-        android:textSize="12sp"
-        app:drawableStartCompat="@drawable/ic_message_like_outline"
-        app:layout_constraintBottom_toBottomOf="@id/tv_time"
-        app:layout_constraintStart_toEndOf="@id/btn_reply"
-        app:layout_constraintTop_toTopOf="@id/tv_time" />
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_delete"
+            app:tint="#61666D" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:includeFontPadding="false"
+            android:text="@string/creator_delete"
+            android:textColor="#61666D"
+            android:textSize="12sp" />
+    </LinearLayout>
 
     <androidx.constraintlayout.widget.Barrier
         android:id="@+id/barrier_row_bottom"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:barrierDirection="bottom"
-        app:constraint_referenced_ids="tv_time,layout_preview_group" />
+        app:constraint_referenced_ids="btn_delete,layout_preview_group" />
 
     <View
         android:layout_width="0dp"

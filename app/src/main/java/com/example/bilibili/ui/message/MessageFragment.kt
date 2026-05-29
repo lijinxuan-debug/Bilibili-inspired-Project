@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -19,6 +20,7 @@ import com.example.bilibili.data.api.MessageService
 import com.example.bilibili.databinding.FragmentMessageBinding
 import com.example.bilibili.databinding.ItemMessageQuickActionBinding
 import com.example.bilibili.util.ApiJson.isSuccess
+import com.example.bilibili.util.PagingUiHelper
 import com.example.bilibili.util.RetrofitClient
 import com.example.bilibili.util.ToastUtils
 import kotlinx.coroutines.flow.collectLatest
@@ -30,8 +32,15 @@ class MessageFragment : Fragment() {
     private var _binding: FragmentMessageBinding? = null
     private val binding get() = _binding!!
 
-    private val inboxAdapter = MessageInboxAdapter()
+    private val inboxAdapter = MessageInboxAdapter { item ->
+        markMessageRead(item.messageId)
+    }
     private val messageService = RetrofitClient.create(MessageService::class.java)
+    private val sseClient = MessageSseClient()
+
+    private lateinit var quickReplyBinding: ItemMessageQuickActionBinding
+    private lateinit var quickLikeBinding: ItemMessageQuickActionBinding
+    private lateinit var quickFansBinding: ItemMessageQuickActionBinding
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -48,11 +57,34 @@ class MessageFragment : Fragment() {
         setupToolbar()
         setupQuickActions()
         setupInboxList()
+        observeBadges()
+        MessageUnreadCenter.onInboxShouldRefresh = { inboxAdapter.refresh() }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        sseClient.start { payload ->
+            activity?.runOnUiThread {
+                MessageUnreadCenter.applySsePayload(payload)
+            }
+        }
+    }
+
+    override fun onStop() {
+        sseClient.stop()
+        super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
+        refreshUnreadCounts()
         inboxAdapter.refresh()
+    }
+
+    override fun onDestroyView() {
+        MessageUnreadCenter.onInboxShouldRefresh = null
+        super.onDestroyView()
+        _binding = null
     }
 
     private fun setupInsets() {
@@ -64,48 +96,83 @@ class MessageFragment : Fragment() {
     }
 
     private fun setupToolbar() {
-        binding.btnMarkAllRead.setOnClickListener { markAllRead() }
+        binding.btnMarkAllRead.setOnClickListener { confirmMarkAllRead() }
     }
 
     private fun setupQuickActions() {
+        quickReplyBinding = ItemMessageQuickActionBinding.bind(binding.quickReply.root)
+        quickLikeBinding = ItemMessageQuickActionBinding.bind(binding.quickLike.root)
+        quickFansBinding = ItemMessageQuickActionBinding.bind(binding.quickFans.root)
+
         bindQuickAction(
-            ItemMessageQuickActionBinding.bind(binding.quickReply.root),
-            R.drawable.bg_message_quick_green,
+            quickReplyBinding,
             R.drawable.ic_message_quick_reply,
             getString(R.string.message_quick_reply),
         )
         bindQuickAction(
-            ItemMessageQuickActionBinding.bind(binding.quickLike.root),
-            R.drawable.bg_message_quick_pink,
+            quickLikeBinding,
             R.drawable.ic_message_quick_like,
             getString(R.string.message_quick_like),
         )
         bindQuickAction(
-            ItemMessageQuickActionBinding.bind(binding.quickFans.root),
-            R.drawable.bg_message_quick_blue,
+            quickFansBinding,
             R.drawable.ic_message_quick_fans,
             getString(R.string.message_quick_fans),
         )
+
         binding.quickReply.root.setOnClickListener {
-            MessageCategoryActivity.start(requireContext(), MessageCategoryActivity.MODE_REPLY)
+            markCategoryRead(MessageCategoryActivity.MODE_REPLY) {
+                MessageUnreadCenter.clearReply()
+                MessageCategoryActivity.start(requireContext(), MessageCategoryActivity.MODE_REPLY)
+            }
         }
         binding.quickLike.root.setOnClickListener {
-            MessageCategoryActivity.start(requireContext(), MessageCategoryActivity.MODE_LIKE)
+            markCategoryRead(MessageCategoryActivity.MODE_LIKE) {
+                MessageUnreadCenter.clearLike()
+                MessageCategoryActivity.start(requireContext(), MessageCategoryActivity.MODE_LIKE)
+            }
         }
         binding.quickFans.root.setOnClickListener {
-            MessageCategoryActivity.start(requireContext(), MessageCategoryActivity.MODE_FANS)
+            markCategoryRead(MessageCategoryActivity.MODE_FANS) {
+                MessageUnreadCenter.clearFans()
+                MessageCategoryActivity.start(requireContext(), MessageCategoryActivity.MODE_FANS)
+            }
         }
     }
 
     private fun bindQuickAction(
         itemBinding: ItemMessageQuickActionBinding,
-        bgRes: Int,
         iconRes: Int,
         label: String,
     ) {
-        itemBinding.viewIconBg.setBackgroundResource(bgRes)
+        itemBinding.viewIconBg.setBackgroundResource(R.drawable.bg_message_quick_grey)
         itemBinding.ivIcon.setImageResource(iconRes)
         itemBinding.tvLabel.text = label
+    }
+
+    private fun observeBadges() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                MessageUnreadCenter.badges.collectLatest { badges ->
+                    bindBadge(quickReplyBinding, badges.reply)
+                    bindBadge(quickLikeBinding, badges.like)
+                    bindBadge(quickFansBinding, badges.fans)
+                }
+            }
+        }
+    }
+
+    private fun bindBadge(itemBinding: ItemMessageQuickActionBinding, count: Int) {
+        if (count <= 0) {
+            itemBinding.tvBadge.isVisible = false
+            return
+        }
+        itemBinding.tvBadge.isVisible = true
+        itemBinding.tvBadge.text = if (count > 99) {
+            getString(R.string.message_badge_max)
+        } else {
+            count.toString()
+        }
     }
 
     private fun setupInboxList() {
@@ -125,14 +192,65 @@ class MessageFragment : Fragment() {
                     }
                 }
                 launch {
-                    inboxAdapter.loadStateFlow.collectLatest { state ->
+                    PagingUiHelper.bindOverlayEmptyState(
+                        viewLifecycleOwner,
+                        binding.tvEmpty,
+                        inboxAdapter,
+                    ) { state ->
                         binding.swipeRefresh.isRefreshing = state.refresh is LoadState.Loading
-                        val isEmpty = state.refresh is LoadState.NotLoading && inboxAdapter.itemCount == 0
-                        binding.tvEmpty.isVisible = isEmpty
                     }
                 }
             }
         }
+    }
+
+    private fun refreshUnreadCounts() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching { MessageUnreadCenter.refreshFromApi(messageService) }
+        }
+    }
+
+    private fun markCategoryRead(mode: Int, onSuccess: () -> Unit) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val ok = runCatching {
+                when (mode) {
+                    MessageCategoryActivity.MODE_LIKE -> {
+                        JSONObject(messageService.readAll(MessageTypes.LIKE)).isSuccess() &&
+                            JSONObject(messageService.readAll(MessageTypes.COLLECTION)).isSuccess()
+                    }
+                    MessageCategoryActivity.MODE_FANS ->
+                        JSONObject(messageService.readAll(MessageTypes.FANS)).isSuccess()
+                    else ->
+                        JSONObject(messageService.readAll(MessageTypes.COMMENT)).isSuccess()
+                }
+            }.getOrDefault(false)
+            if (ok) {
+                onSuccess()
+                inboxAdapter.refresh()
+            } else {
+                ToastUtils.showShort(requireContext(), "操作失败")
+            }
+        }
+    }
+
+    private fun markMessageRead(messageId: Int) {
+        if (messageId <= 0) return
+        MessageUnreadCenter.markMessageReadLocally(messageId)
+        val position = inboxAdapter.snapshot().items.indexOfFirst { it.messageId == messageId }
+        if (position >= 0) {
+            inboxAdapter.notifyItemChanged(position)
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching { messageService.readMessage(messageId) }
+        }
+    }
+
+    private fun confirmMarkAllRead() {
+        AlertDialog.Builder(requireContext())
+            .setMessage(R.string.message_clear_all_confirm)
+            .setPositiveButton(android.R.string.ok) { _, _ -> markAllRead() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun markAllRead() {
@@ -148,6 +266,7 @@ class MessageFragment : Fragment() {
                     JSONObject(messageService.readAll(type)).isSuccess()
                 }
                 if (ok) {
+                    MessageUnreadCenter.clearAll()
                     ToastUtils.showShort(requireContext(), getString(R.string.message_clear_done))
                     inboxAdapter.refresh()
                 } else {
@@ -157,10 +276,5 @@ class MessageFragment : Fragment() {
                 ToastUtils.showShort(requireContext(), e.message ?: "操作失败")
             }
         }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }

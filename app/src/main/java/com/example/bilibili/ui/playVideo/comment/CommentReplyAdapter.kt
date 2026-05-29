@@ -15,10 +15,16 @@ class CommentReplyAdapter(
     private val onAvatarClick: (String) -> Unit,
     private val onCommentClick: (CommentItem) -> Unit,
     private val onLikeClick: (CommentItem) -> Unit,
-    private val onDislikeClick: (CommentItem) -> Unit
+    private val onDislikeClick: (CommentItem) -> Unit,
 ) : RecyclerView.Adapter<CommentReplyAdapter.CommentReplyViewHolder>() {
 
     private var comments = listOf<CommentItem>()
+    private var highlightedCommentId: Int? = null
+
+    fun setHighlightedCommentId(commentId: Int?) {
+        highlightedCommentId = commentId
+        notifyDataSetChanged()
+    }
 
     fun submitList(newComments: List<CommentItem>) {
         comments = newComments
@@ -42,7 +48,14 @@ class CommentReplyAdapter(
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: CommentItem) {
-            // 基础信息绑定
+            binding.root.setBackgroundResource(
+                if (item.commentId == highlightedCommentId) {
+                    R.drawable.bg_comment_anchor_highlight
+                } else {
+                    android.R.color.white
+                },
+            )
+
             binding.tvUserName.text = item.nickName
             binding.tvCommentText.text = item.content
             binding.tvTimePlace.text = item.postTime

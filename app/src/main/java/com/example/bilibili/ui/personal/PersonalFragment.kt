@@ -24,6 +24,7 @@ import com.example.bilibili.ui.login.LoginActivity
 import com.example.bilibili.ui.personal.collect.CollectFragment
 import com.example.bilibili.ui.personal.contribute.ContributeFragment
 import com.example.bilibili.ui.personal.home.HomeFragment
+import com.example.bilibili.util.AvatarUpdateHelper
 import com.example.bilibili.util.GlideEngine
 import com.example.bilibili.util.ToastUtils
 import com.example.bilibili.util.UserInfoText
@@ -128,8 +129,36 @@ class PersonalFragment : Fragment() {
             copyUidToClipboard()
         }
 
+        binding.ivAvatar.setOnClickListener {
+            changeAvatarFromGallery()
+        }
+
         setupLogoutButton()
     } // 🔥 修复点1：在这里加上右大括号，正确结束 onViewCreated 方法
+
+    private fun changeAvatarFromGallery() {
+        if (SPUtils.getToken().isEmpty() || SPUtils.getUserId().isEmpty()) {
+            ToastUtils.showShort(requireContext(), "请先登录")
+            startActivity(Intent(requireContext(), LoginActivity::class.java))
+            return
+        }
+        AvatarUpdateHelper.pickAndUpdate(
+            activity = requireActivity(),
+            scope = viewLifecycleOwner.lifecycleScope,
+            onPreview = { localPath ->
+                ToastUtils.showShort(requireContext(), "正在更新头像...")
+                GlideEngine.loadUserAvatar(requireContext(), localPath, binding.ivAvatar)
+            },
+            onSuccess = { avatarUrl ->
+                GlideEngine.loadUserAvatar(requireContext(), avatarUrl, binding.ivAvatar)
+                ToastUtils.showShort(requireContext(), "头像已更新")
+            },
+            onError = { message ->
+                ToastUtils.showShort(requireContext(), message)
+                GlideEngine.loadUserAvatar(requireContext(), SPUtils.getAvatar(), binding.ivAvatar)
+            },
+        )
+    }
 
     private fun copyUidToClipboard() {
         val uid = currentUserId.ifEmpty { SPUtils.getUserId() }

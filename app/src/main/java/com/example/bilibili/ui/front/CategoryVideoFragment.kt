@@ -79,31 +79,26 @@ class CategoryVideoFragment : Fragment() {
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            videoAdapter.loadStateFlow.collect { loadState ->
-                binding.swipeRefreshLayout.isRefreshing = loadState.refresh is LoadState.Loading
+        PagingUiHelper.bindEmptyState(
+            viewLifecycleOwner,
+            binding.emptyState.llEmpty,
+            binding.recyclerView,
+            videoAdapter,
+        ) { loadState ->
+            binding.swipeRefreshLayout.isRefreshing = loadState.refresh is LoadState.Loading
 
-                PagingUiHelper.updateEmptyState(
-                    binding.emptyState.llEmpty,
-                    binding.recyclerView,
-                    videoAdapter,
-                    loadState,
-                )
+            if (loadState.refresh is LoadState.Error) {
+                val error = (loadState.refresh as LoadState.Error).error
+                Log.e("CategoryVideoFragment", "加载失败: ${error.message}")
+                binding.swipeRefreshLayout.isRefreshing = false
+                scrollToTopAfterRefresh = false
+            }
 
-                if (loadState.refresh is LoadState.Error) {
-                    val error = (loadState.refresh as LoadState.Error).error
-                    Log.e("CategoryVideoFragment", "加载失败: ${error.message}")
-                    binding.swipeRefreshLayout.isRefreshing = false
-                    scrollToTopAfterRefresh = false
-                }
-
-                // 刷新完成：数据已从第 1 页重载，必须把列表视口也滚回顶部
-                if (scrollToTopAfterRefresh && loadState.refresh is LoadState.NotLoading) {
-                    scrollToTopAfterRefresh = false
-                    binding.recyclerView.post {
-                        PagingUiHelper.scrollContentToTop(binding.recyclerView)
-                        (parentFragment as? FrontPageFragment)?.expandAppBar()
-                    }
+            if (scrollToTopAfterRefresh && loadState.refresh is LoadState.NotLoading) {
+                scrollToTopAfterRefresh = false
+                binding.recyclerView.post {
+                    PagingUiHelper.scrollContentToTop(binding.recyclerView)
+                    (parentFragment as? FrontPageFragment)?.expandAppBar()
                 }
             }
         }

@@ -9,7 +9,8 @@ object PasswordToggleHelper {
 
     fun bind(toggle: ImageButton, editText: EditText) {
         var visible = false
-        toggle.setImageResource(com.example.bilibili.R.drawable.ic_visibility)
+        // 密码默认隐藏 → 闭眼；明文显示 → 睁眼
+        toggle.setImageResource(com.example.bilibili.R.drawable.ic_visibility_off)
         toggle.setOnClickListener {
             visible = !visible
             editText.transformationMethod = if (visible) {
@@ -19,8 +20,8 @@ object PasswordToggleHelper {
             }
             editText.setSelection(editText.text.length)
             toggle.setImageResource(
-                if (visible) com.example.bilibili.R.drawable.ic_visibility_off
-                else com.example.bilibili.R.drawable.ic_visibility
+                if (visible) com.example.bilibili.R.drawable.ic_visibility
+                else com.example.bilibili.R.drawable.ic_visibility_off,
             )
         }
     }

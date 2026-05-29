@@ -135,13 +135,6 @@
                 android:textColor="#757575"
                 android:textSize="11sp"
                 tools:text="何日藕、几时莲" />
-
-            <ImageView
-                android:id="@+id/ivMore"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_more_vert"
-                app:tint="#999999" />
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

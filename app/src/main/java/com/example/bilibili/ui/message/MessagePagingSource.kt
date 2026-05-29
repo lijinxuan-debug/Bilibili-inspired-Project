@@ -36,11 +36,7 @@ class MessagePagingSource(
             val listArray = data.getJSONArray("list")
             val list = mutableListOf<UserMessageItem>()
             for (i in 0 until listArray.length()) {
-                val item = UserMessageItem.fromJson(listArray.getJSONObject(i))
-                if (messageType == MessageTypes.COMMENT && item.messageContentReply.isBlank()) {
-                    continue
-                }
-                list.add(item)
+                list.add(UserMessageItem.fromJson(listArray.getJSONObject(i)))
             }
             LoadResult.Page(
                 data = list,

@@ -147,10 +147,20 @@ class PlayVideoActivity : AppCompatActivity() {
         initObservers()
 
         // 4. 获取 Intent 数据并触发加载
-        val videoId = intent.getStringExtra("video_id") ?: ""
+        val videoId = intent.getStringExtra(EXTRA_VIDEO_ID) ?: ""
         if (videoId.isNotEmpty()) {
-            // 调用 ViewModel 里的全量加载函数
+            if (intent.getBooleanExtra(EXTRA_OPEN_COMMENT_TAB, false)) {
+                viewModel.setPendingCommentAnchor(
+                    CommentAnchor(
+                        sendUserId = intent.getStringExtra(EXTRA_ANCHOR_SEND_USER_ID).orEmpty(),
+                        content = intent.getStringExtra(EXTRA_ANCHOR_CONTENT).orEmpty(),
+                    ),
+                )
+            }
             viewModel.fetchAllData(videoId)
+            if (intent.getBooleanExtra(EXTRA_OPEN_COMMENT_TAB, false)) {
+                binding.viewPager.post { binding.viewPager.setCurrentItem(1, false) }
+            }
         } else {
             ToastUtils.showShort(this, "视频 ID 缺失")
         }
@@ -885,6 +895,11 @@ class PlayVideoActivity : AppCompatActivity() {
     }
 
     companion object {
+        const val EXTRA_VIDEO_ID = "video_id"
+        const val EXTRA_OPEN_COMMENT_TAB = "open_comment_tab"
+        const val EXTRA_ANCHOR_SEND_USER_ID = "anchor_send_user_id"
+        const val EXTRA_ANCHOR_CONTENT = "anchor_content"
+
         private const val KEY_PLAY_POSITION = "play_position"
         private const val KEY_WAS_PLAYING = "was_playing"
         private const val DANMU_EXPAND_ANIM_MS = 220L

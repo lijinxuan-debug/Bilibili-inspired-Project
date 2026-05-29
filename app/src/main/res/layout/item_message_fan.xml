@@ -15,50 +15,13 @@
         android:id="@+id/iv_avatar"
         android:layout_width="48dp"
         android:layout_height="48dp"
+        android:contentDescription="@null"
         android:scaleType="centerCrop"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:shapeAppearanceOverlay="@style/CircleImage"
         tools:src="@tools:sample/avatars" />
-
-    <TextView
-        android:id="@+id/tv_name"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="8dp"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:textColor="#212121"
-        android:textSize="15sp"
-        app:layout_constraintEnd_toStartOf="@id/btn_follow_back"
-        app:layout_constraintStart_toEndOf="@id/iv_avatar"
-        app:layout_constraintTop_toTopOf="@id/iv_avatar"
-        tools:text="bili_78421962072" />
-
-    <TextView
-        android:id="@+id/tv_action"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/message_action_followed_me"
-        android:textColor="#999999"
-        android:textSize="14sp"
-        app:layout_constraintBaseline_toBaselineOf="@id/tv_name"
-        app:layout_constraintStart_toEndOf="@id/tv_name" />
-
-    <TextView
-        android:id="@+id/tv_time"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="6dp"
-        android:textColor="#999999"
-        android:textSize="12sp"
-        app:layout_constraintEnd_toStartOf="@id/btn_follow_back"
-        app:layout_constraintStart_toEndOf="@id/iv_avatar"
-        app:layout_constraintTop_toBottomOf="@id/tv_name"
-        tools:text="5月13日" />
 
     <TextView
         android:id="@+id/btn_follow_back"
@@ -74,6 +37,48 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tv_action"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
+        android:text="@string/message_action_followed_me"
+        android:textColor="#999999"
+        android:textSize="14sp"
+        app:layout_constraintBaseline_toBaselineOf="@id/tv_name"
+        app:layout_constraintEnd_toStartOf="@id/btn_follow_back"
+        app:layout_constraintStart_toEndOf="@id/tv_name" />
+
+    <TextView
+        android:id="@+id/tv_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#212121"
+        android:textSize="15sp"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintEnd_toStartOf="@id/tv_action"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintStart_toEndOf="@id/iv_avatar"
+        app:layout_constraintTop_toTopOf="@id/iv_avatar"
+        tools:text="bili_78421962072" />
+
+    <TextView
+        android:id="@+id/tv_time"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="6dp"
+        android:textColor="#999999"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toStartOf="@id/btn_follow_back"
+        app:layout_constraintStart_toEndOf="@id/iv_avatar"
+        app:layout_constraintTop_toBottomOf="@id/tv_name"
+        tools:text="5月13日" />
 
     <View
         android:layout_width="0dp"

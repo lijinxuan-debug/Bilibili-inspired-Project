@@ -109,20 +109,16 @@ class ContributeFragment : Fragment() {
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            adapter.loadStateFlow.collect { loadState ->
-                binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
-                PagingUiHelper.updateEmptyState(
-                    binding.emptyState.llEmpty,
-                    binding.rvVideoList,
-                    adapter,
-                    loadState
-                )
-
-                if (loadState.refresh is LoadState.NotLoading && shouldScrollToTop) {
-                    binding.rvVideoList.scrollToPosition(0)
-                    shouldScrollToTop = false
-                }
+        PagingUiHelper.bindEmptyState(
+            viewLifecycleOwner,
+            binding.emptyState.llEmpty,
+            binding.rvVideoList,
+            adapter,
+        ) { loadState ->
+            binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
+            if (loadState.refresh is LoadState.NotLoading && shouldScrollToTop) {
+                binding.rvVideoList.scrollToPosition(0)
+                shouldScrollToTop = false
             }
         }
     }

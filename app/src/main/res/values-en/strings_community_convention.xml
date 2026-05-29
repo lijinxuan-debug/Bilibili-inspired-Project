@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="convention_screen_title">Community Guidelines</string>
+    <string name="convention_lang_zh">简体中文</string>
+    <string name="convention_lang_en">English</string>
+    <string name="convention_lang_ja">日本語</string>
+    <string name="convention_doc_title">Haven Community Guidelines</string>
+    <string name="convention_update_date">Last updated: February 12, 2026</string>
+    <string name="convention_effective_date">Effective: February 19, 2026</string>
+    <string name="publish_protocol_prefix">I have read and accept </string>
+    <string name="community_convention_link">Haven Community Guidelines</string>
+    <string name="convention_body"><![CDATA[
+[Update Notice]
+To maintain a respectful and orderly community, Haven has revised these Community Guidelines. Please read them before uploading or interacting on the platform. Contact us via in-app feedback if you have questions.
+
+Table of Contents
+I. Introduction
+II. Core Principles
+III. Content Standards
+IV. Interaction Standards
+V. Copyright and Reposts
+VI. Enforcement
+VII. Appeals and Contact
+
+I. Introduction
+Welcome to Haven (the “Platform”). These Guidelines apply to all users and cover video uploads, comments, danmaku, direct messages, follows, and other interactions. By registering, logging in, or using our services, you agree to these Guidelines and other Platform rules.
+
+II. Core Principles
+1. Comply with applicable laws and public order.
+2. Respect the rights of others; no insults, defamation, harassment, doxxing, or similar conduct.
+3. Do not use the Platform for fraud, illegal gambling, pornography, incitement to violence, or other unlawful activity.
+4. Accurately label original vs. reposted content; obtain authorization when required.
+
+III. Content Standards
+1. Do not publish illegal, pornographic, excessively violent, hateful, or knowingly false content.
+2. No malicious marketing, artificial inflation of metrics, or improper off-site redirection.
+3. Titles, thumbnails, and tags must match the video; no misleading presentation.
+4. For news, medical, financial, or other sensitive topics, cite sources and avoid spreading unverified claims.
+5. Multi-part uploads and descriptions must be accurate and must not contain prohibited ads or contact details (except as permitted by the Platform).
+
+IV. Interaction Standards
+1. Use civil language in comments, danmaku, and messages; no personal attacks, baiting, or spam.
+2. Do not impersonate others, fake official accounts, or distribute phishing links.
+3. Respect creators; oppose online harassment.
+4. Protect minors; do not encourage harmful behavior toward minors.
+
+V. Copyright and Reposts
+1. You must own or be authorized to use the content you upload.
+2. Reposts must be labeled accordingly with source information; unauthorized re-uploads are prohibited.
+3. Upon valid infringement notices, the Platform may remove or restrict content as required by law.
+
+VI. Enforcement
+Depending on severity, the Platform may warn, restrict distribution, remove content, limit features, or suspend accounts; illegal conduct may be reported to authorities.
+
+VII. Appeals and Contact
+Users may appeal enforcement actions through in-app “Help & Feedback” within the stated period. Haven will review and respond after verification.
+
+— Haven Operations Team
+]]></string>
+</resources>

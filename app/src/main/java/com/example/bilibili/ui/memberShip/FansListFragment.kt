@@ -73,18 +73,15 @@ class FansListFragment : Fragment() {
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            adapter.loadStateFlow.collect { loadState ->
-                binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
-                PagingUiHelper.updateEmptyState(
-                    binding.emptyState.llEmpty,
-                    binding.rvList,
-                    adapter,
-                    loadState,
-                )
-                if (loadState.refresh is LoadState.NotLoading) {
-                    updateFansSummary(adapter.itemCount)
-                }
+        PagingUiHelper.bindEmptyState(
+            viewLifecycleOwner,
+            binding.emptyState.llEmpty,
+            binding.rvList,
+            adapter,
+        ) { loadState ->
+            binding.swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading
+            if (loadState.refresh is LoadState.NotLoading) {
+                updateFansSummary(adapter.itemCount)
             }
         }
     }

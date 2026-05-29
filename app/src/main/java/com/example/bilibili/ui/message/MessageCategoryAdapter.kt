@@ -2,6 +2,7 @@ package com.example.bilibili.ui.message
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -14,6 +15,7 @@ import com.example.bilibili.util.GlideEngine
 class MessageCategoryAdapter(
     private val pageMode: Int,
     private val onFollowBack: (UserMessageItem) -> Unit,
+    private val onDelete: (UserMessageItem) -> Unit,
 ) : PagingDataAdapter<UserMessageItem, RecyclerView.ViewHolder>(DiffCallback) {
 
     override fun getItemViewType(position: Int): Int = pageMode
@@ -25,7 +27,10 @@ class MessageCategoryAdapter(
                 ItemMessageFanBinding.inflate(inflater, parent, false),
                 onFollowBack,
             )
-            else -> ReplyHolder(ItemMessageReplyBinding.inflate(inflater, parent, false))
+            else -> ReplyHolder(
+                ItemMessageReplyBinding.inflate(inflater, parent, false),
+                onDelete,
+            )
         }
     }
 
@@ -39,16 +44,47 @@ class MessageCategoryAdapter(
 
     private class ReplyHolder(
         private val binding: ItemMessageReplyBinding,
+        private val onDelete: (UserMessageItem) -> Unit,
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: UserMessageItem) {
             val context = binding.root.context
             binding.tvName.text = item.sendUserName
-            binding.tvAction.text = context.getString(R.string.message_action_reply_comment)
-            binding.tvContent.text = item.messageContent
             binding.tvTime.text = MessageTimeFormatter.format(item.createTimeRaw)
             GlideEngine.loadUserAvatar(context, item.sendUserAvatar, binding.ivAvatar)
-            binding.tvPreview.text = item.messageContentReply
+
+            val openProfile = {
+                MessageNavigator.openUserProfile(context, item.sendUserId)
+            }
+            MessageNavigator.bindUserProfileClick(binding.ivAvatar, item.sendUserId, openProfile)
+            MessageNavigator.bindUserProfileClick(binding.tvName, item.sendUserId, openProfile)
+
+            binding.btnDelete.setOnClickListener { onDelete(item) }
+            binding.root.setOnClickListener {
+                MessageNavigator.openMessageTarget(context, item)
+            }
+            binding.layoutPreviewGroup.setOnClickListener {
+                MessageNavigator.openMessageTarget(context, item)
+            }
+
+            if (item.isDirectVideoComment) {
+                binding.tvAction.text = context.getString(R.string.message_commented_my_video)
+                binding.tvContent.text = item.messageContent
+                val showCover = item.videoCover.isNotBlank()
+                binding.ivPreviewCover.isVisible = showCover
+                binding.tvPreview.isVisible = !showCover
+                if (showCover) {
+                    GlideEngine.loadVideoCover(context, item.videoCover, binding.ivPreviewCover)
+                } else {
+                    binding.tvPreview.text = item.videoName.ifBlank { "" }
+                }
+            } else {
+                binding.tvAction.text = context.getString(R.string.message_action_reply_comment)
+                binding.tvContent.text = item.messageContent
+                binding.ivPreviewCover.isVisible = false
+                binding.tvPreview.isVisible = true
+                binding.tvPreview.text = item.messageContentReply
+            }
         }
     }
 
@@ -58,10 +94,19 @@ class MessageCategoryAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: UserMessageItem) {
+            val context = binding.root.context
             binding.tvName.text = item.sendUserName
             binding.tvTime.text = MessageTimeFormatter.format(item.createTimeRaw)
-            GlideEngine.loadUserAvatar(binding.root.context, item.sendUserAvatar, binding.ivAvatar)
+            GlideEngine.loadUserAvatar(context, item.sendUserAvatar, binding.ivAvatar)
+
+            val openProfile = {
+                MessageNavigator.openUserProfile(context, item.sendUserId)
+            }
+            MessageNavigator.bindUserProfileClick(binding.ivAvatar, item.sendUserId, openProfile)
+            MessageNavigator.bindUserProfileClick(binding.tvName, item.sendUserId, openProfile)
+
             binding.btnFollowBack.setOnClickListener { onFollowBack(item) }
+            binding.root.setOnClickListener { openProfile() }
         }
     }
 

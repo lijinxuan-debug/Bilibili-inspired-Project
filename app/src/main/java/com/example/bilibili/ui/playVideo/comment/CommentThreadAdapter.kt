@@ -21,6 +21,12 @@ class CommentThreadAdapter(
 
     private var comments = listOf<CommentItem>()
     private var isOriginalComment = false // 是否为原主评论
+    private var highlightedCommentId: Int? = null
+
+    fun setHighlightedCommentId(commentId: Int?) {
+        highlightedCommentId = commentId
+        notifyDataSetChanged()
+    }
 
     fun submitList(newComments: List<CommentItem>, isOriginalComment: Boolean = false) {
         comments = newComments
@@ -45,6 +51,11 @@ class CommentThreadAdapter(
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: CommentItem, isOriginalComment: Boolean) {
+            val highlighted = item.commentId == highlightedCommentId
+            binding.root.setBackgroundResource(
+                if (highlighted) R.drawable.bg_comment_anchor_highlight else android.R.color.white,
+            )
+
             binding.root.foreground = null
             binding.commentContentArea.foreground = null
             binding.llLike.foreground = null

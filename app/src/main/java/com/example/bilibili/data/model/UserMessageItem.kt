@@ -16,6 +16,7 @@ data class UserMessageItem(
     val commentId: Int,
     val previewType: String,
     val createTimeRaw: String,
+    val readType: Int,
 ) {
     val isCommentTarget: Boolean
         get() = when (previewType) {
@@ -24,10 +25,18 @@ data class UserMessageItem(
             else -> commentId > 0 || messageContentReply.isNotBlank()
         }
 
+    /** 用户直接在视频下评论（非回复某条评论） */
+    val isDirectVideoComment: Boolean
+        get() = messageType == MESSAGE_TYPE_COMMENT &&
+            messageContentReply.isBlank() &&
+            !isCommentTarget
+
     fun previewTextForLike(): String =
         messageContentReply.ifBlank { messageContent }.ifBlank { videoName }
 
     companion object {
+        private const val MESSAGE_TYPE_COMMENT = 4
+
         fun fromJson(json: JSONObject): UserMessageItem {
             val extend = json.optJSONObject("extendDto")
                 ?: run {
@@ -48,6 +57,7 @@ data class UserMessageItem(
                 commentId = extend.optInt("commentId", 0),
                 previewType = extend.optCleanString("previewType"),
                 createTimeRaw = json.optCleanString("createTime"),
+                readType = json.optInt("readType", 0),
             )
         }
 

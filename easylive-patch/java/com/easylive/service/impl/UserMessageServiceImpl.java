@@ -23,11 +23,13 @@ import com.easylive.mappers.UserActionMapper;
 import com.easylive.mappers.VideoCommentMapper;
 import com.easylive.mappers.VideoInfoMapper;
 import com.easylive.mappers.VideoInfoPostMapper;
+import com.easylive.service.UserMessagePushService;
 import com.easylive.service.UserMessageService;
 import com.easylive.mappers.UserMessageMapper;
 import com.easylive.utils.JsonUtils;
 import com.easylive.utils.StringTools;
 import org.apache.commons.lang3.ArrayUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -51,6 +53,9 @@ public class UserMessageServiceImpl implements UserMessageService {
 
     @Resource
     private VideoInfoPostMapper<VideoInfoPost, VideoInfoPostQuery> videoInfoPostMapper;
+
+    @Autowired(required = false)
+    private UserMessagePushService userMessagePushService;
 
     @Resource
     private UserActionMapper<UserAction, UserActionQuery> userActionMapper;
@@ -199,6 +204,8 @@ public class UserMessageServiceImpl implements UserMessageService {
             if (StringTools.isEmpty(userMessageDto.getMessageContent())) {
                 userMessageDto.setMessageContent(videoInfo.getVideoName());
             }
+        } else if (MessageTypeEnum.COMMENT.getType().equals(messageTypeEnum.getType())) {
+            userMessageDto.setPreviewType("video");
         }
 
         if (receiveUserId.equals(sendUserId)) {
@@ -243,6 +250,7 @@ public class UserMessageServiceImpl implements UserMessageService {
         userMessage.setUserId(receiveUserId);
         userMessage.setExtendJson(JsonUtils.convertObj2Json(userMessageDto));
         userMessageMapper.insert(userMessage);
+        pushNewMessage(receiveUserId, userMessage);
     }
 
     @Override
@@ -265,6 +273,13 @@ public class UserMessageServiceImpl implements UserMessageService {
         userMessage.setCreateTime(new Date());
         userMessage.setExtendJson(JsonUtils.convertObj2Json(extendDto));
         userMessageMapper.insert(userMessage);
+        pushNewMessage(receiveUserId, userMessage);
+    }
+
+    private void pushNewMessage(String receiveUserId, UserMessage userMessage) {
+        if (userMessagePushService != null) {
+            userMessagePushService.onNewMessage(receiveUserId, userMessage);
+        }
     }
 
     @Override

@@ -70,6 +70,19 @@ class PlayVideoViewModel : ViewModel() {
 
     // --- 新增评论相关观察数据 ---
     val commentListLive = MutableLiveData<List<CommentItem>>()
+    val commentAnchorLive = MutableLiveData<CommentAnchor?>()
+
+    private var pendingCommentAnchor: CommentAnchor? = null
+
+    fun setPendingCommentAnchor(anchor: CommentAnchor?) {
+        pendingCommentAnchor = anchor
+    }
+
+    fun consumeCommentAnchor(): CommentAnchor? {
+        val anchor = pendingCommentAnchor
+        pendingCommentAnchor = null
+        return anchor
+    }
     val isCommentLoading = MutableLiveData<Boolean>()
     val commentTotalCount = MutableLiveData<Int>()
     /** 评论排序：0-按热度，1-按时间 */
